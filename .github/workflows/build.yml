@@ -54,10 +54,26 @@ jobs:
           rustc --version
           cargo --version
 
-      - name: Build Rust Engine
+      
+      - name: Inspect repository
         run: |
-          cargo build --release \
-            --manifest-path rust_engine/Cargo.toml
+          echo "===== ROOT ====="
+          ls -la
+
+          echo "===== SUBMODULES ====="
+          git submodule status || true
+
+          echo "===== CARGO FILES ====="
+          find . -name Cargo.toml \
+            -not -path "*/target/*" \
+            -not -path "*/.git/*"
+
+          echo "===== GRADLE FILES ====="
+          find . \( -name build.gradle \
+            -o -name settings.gradle \
+            -o -name gradlew \) \
+            -not -path "*/.git/*"
+
 
       - name: Build Fabric Mod
         run: |
