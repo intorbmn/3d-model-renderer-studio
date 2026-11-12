@@ -1,0 +1,76 @@
+
+name: MPR - Build and Test
+
+on:
+  push:
+    branches:
+      - main
+      - "port/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build MPR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Setup Java 25
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            pkg-config \
+            clang \
+            libclang-dev
+
+      - name: Check toolchains
+        run: |
+          java -version
+          rustc --version
+          cargo --version
+
+      - name: Build Rust Engine
+        run: |
+          cargo build --release \
+            --manifest-path rust_engine/Cargo.toml
+
+      - name: Build Fabric Mod
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon build
+
+      - name: Upload build outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MPR-Build-${{ github.run_number }}
+          path: |
+            **/build/libs/*.jar
+            rust_engine/target/release/*.so
+          if-no-files-found: warn
+          retention-days: 14
