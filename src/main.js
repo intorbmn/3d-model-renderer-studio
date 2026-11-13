@@ -10,7 +10,13 @@ import { detectGroups, fromVrm, PhysicsPreview, toManifest, chainFrom, makeGroup
 import { detectIllgamesCard, readIllgamesCharacter } from './illgames.js';
 import { FORMATS, exportModel } from './export.js';
 
-export const STUDIO_VERSION = '0.2.0';
+export const STUDIO_VERSION = '0.3.0';
+
+/**
+ * The built-in character maker (template.js) is switched off until it gets a new base model.
+ * Cards made with it still open, as ordinary GLB models.
+ */
+const MAKER_ENABLED = false;
 
 const MOTIONS = [
   ['idle', 'idle.vmd'], ['walk', 'walk.vmd'], ['sprint', 'sprint.vmd'], ['sneak', 'sneak.vmd'],
@@ -94,7 +100,7 @@ async function openCard(bytes) {
   try {
     const card = await readCard(bytes);
     const fileSet = FileSet.fromBytes(card.files);
-    state.template = card.manifest.template?.params ? sanitiseParams(card.manifest.template.params) : null;
+    state.template = MAKER_ENABLED && card.manifest.template?.params ? sanitiseParams(card.manifest.template.params) : null;
     await loadModel(fileSet, card.manifest.model, card.manifest, '', { physics: card.manifest.physics });
   } catch (error) {
     message(error instanceof CardError ? `${t('badCard')} ${error.message}` : String(error));
@@ -107,6 +113,10 @@ async function openIllgamesCard(bytes) {
     character = readIllgamesCharacter(bytes);
   } catch (error) {
     message(`${t('illgamesFailed')} ${error.message ?? error}`);
+    return;
+  }
+  if (!MAKER_ENABLED) {
+    message(t('illgamesInfo', { game: character.game, name: character.name ? `: ${character.name}` : '' }));
     return;
   }
   state.template = sanitiseParams({ ...presetParams(character.sex), ...character.params });
@@ -273,6 +283,7 @@ async function buildTemplate({ first, info = null }) {
   if (!first) state.preview = null;
 }
 
+$('new-character').hidden = !MAKER_ENABLED;
 $('new-character').addEventListener('click', () => $('new-dialog').showModal());
 $('new-dialog').addEventListener('close', async () => {
   const preset = $('new-dialog').returnValue;

@@ -2,28 +2,34 @@
 
 [English](README.md)
 
-Công cụ chạy trên trình duyệt để tạo **card model** cho mod Minecraft [3D Model Renderer](https://github.com/intorbmn/3d-model-renderer). Card là một ảnh PNG của nhân vật, bên trong chứa toàn bộ model (lưới, texture và thông số), giống card nhân vật của Koikatsu. Chỉ cần chia sẻ một file, bỏ vào thư mục `Cards` của mod là dùng được.
+Công cụ chạy trên trình duyệt để tạo **card model** cho mod Minecraft [3D Model Renderer](https://github.com/intorbmn/3d-model-renderer). Card là một ảnh PNG của nhân vật, bên trong chứa toàn bộ model (lưới, texture, thông số và vật lý), giống card nhân vật của Koikatsu. Chỉ cần chia sẻ một file, bỏ vào thư mục `3d-skin/Cards` của mod là dùng được.
 
 **Mở studio:** https://intorbmn.github.io/3d-model-renderer-studio/
 
 Mọi thứ chạy trong trình duyệt của bạn, không tải gì lên mạng.
 
-## Tính năng
+## Cách dùng
 
-- **Tạo nhân vật** từ cơ thể gốc có sẵn (chưa có quần áo, không có chi tiết trên cơ thể, chỉ có mặt), với mẫu **nữ** và **nam**. Chỉnh bằng thanh trượt giống trình tạo nhân vật của các game ILLGAMES: cơ thể, mặt, tóc (kiểu, độ dài, màu), trang phục (áo, váy/quần đùi/quần dài). Tóc, váy và ngực có sẵn xương vật lý.
-- **Nhóm vật lý**: các chuỗi spring bone chia thành nhóm tóc, quần áo, cơ thể và tuỳ chỉnh; tự nhận diện theo tên xương (hoặc lấy spring bone có sẵn của VRM), chỉnh từng nhóm, xem trước trực tiếp và ghi vào card để mod nhận diện. Có thể tự thêm nhóm từ bất kỳ xương nào.
-- **Card ILLGAMES** (Koikatsu, Koikatsu Sunshine, AI Shoujo / Honey Select 2, Honey Come, Summer Vacation Scramble…): các card này chỉ chứa thông số cho trình tạo nhân vật, không có model 3D, nên studio dựng lại nhân vật trên cơ thể gốc theo tỉ lệ cơ thể và màu sắc trong card.
-- **Xuất model** ra GLB, glTF, OBJ, STL hoặc PLY (OBJ/STL/PLY theo tư thế hiện tại), hoặc tải file gốc.
+1. **Mở model**: *Open model folder* (chọn cả thư mục để lấy kèm texture), *Open files*, hoặc kéo thả thư mục vào khung xem. Studio nhận các loại giống mod: **PMX, PMD, VRM, GLB, glTF**.
+2. **Xem model cử động**: chọn động tác ở thanh dưới (đứng, đi, chạy, ngồi, bơi, bò, bay elytra, cưỡi, ngủ, vung tay của mod) hoặc tải file `.vmd` riêng. Với bộ xương không phải MMD, thanh trạng thái báo mod có nhận diện được không.
+3. **Điền thông tin card** (tab *Card*): tên, tác giả model, điều khoản sử dụng, nguồn, ghi chú, kích thước.
+4. **Vật lý** (tab *Physics*), cho model VRM, GLB, glTF:
+   - Các chuỗi spring bone được chia thành nhóm **tóc**, **quần áo**, **cơ thể**, **tuỳ chỉnh** theo tên xương, hoặc lấy từ spring bone có sẵn của VRM. *Detect again* để nhận diện lại.
+   - Mỗi nhóm: bật/tắt, độ cứng, lực cản, trọng lực, bán kính va chạm, và chọn vùng va chạm mà nhóm đó va vào.
+   - **Thêm nhóm tuỳ chỉnh** từ bất kỳ xương gốc nào (chuỗi đi theo các xương con).
+   - **Va chạm**: các vùng va chạm ở đầu, cổ, thân, ngực, hông, tay, chân giữ tóc và quần áo không xuyên qua người. Chỉnh cỡ, thêm vùng ở bất kỳ xương nào, bật *Show colliders* để xem.
+   - *Preview* chạy vật lý trực tiếp khi model đang cử động.
+   - Model PMX/PMD giữ vật lý rigid body có sẵn trong file; mod chạy vật lý đó.
+5. Tab **Colours**: màu theo từng material (mod áp dụng đúng màu này) và xem trước biểu cảm.
+6. **Export card**. Muốn sửa thì mở lại bằng *Open card*.
 
-- Mở các loại model giống mod: **PMX, PMD, VRM, GLB, glTF** (chọn cả thư mục model để lấy kèm texture, hoặc kéo thả vào).
-- Xem trước model với các động tác mặc định của mod (đứng, đi, chạy, ngồi, bơi, bò, bay elytra, cưỡi, ngủ, vung tay) hoặc file `.vmd` bất kỳ. Bộ xương không phải MMD được chuyển động tác giống cách mod làm, và thanh trạng thái cho biết mod có cử động được bộ xương đó hay không.
-- Chỉnh card: tên, tác giả model, điều khoản sử dụng, nguồn, ghi chú, kích thước và màu cho từng material (mod áp dụng đúng các màu này). Thanh biểu cảm chỉ để xem trước.
-- Xuất card thành ảnh PNG. Mở lại card để sửa tiếp.
-- Muốn bản sao chính xác của nhân vật Koikatsu: xuất nhân vật ra PMX bằng KKBP exporter trong game rồi mở file PMX đó ở đây.
+**Export model** lưu model ra GLB, glTF, OBJ, STL hoặc PLY (OBJ/STL/PLY theo tư thế đang hiển thị), hoặc tải file gốc.
+
+**Card ILLGAMES** (Koikatsu, Koikatsu Sunshine, AI Shoujo / Honey Select 2, Honey Come, Summer Vacation Scramble…) được nhận ra và đọc, nhưng chỉ chứa thông số cho trình tạo nhân vật của game, không có model 3D. Trong lúc studio chưa có model gốc, hãy xuất nhân vật ra PMX (Koikatsu: KKBP exporter) rồi mở file đó.
 
 ## Định dạng card
 
-Xem [docs/CARD_FORMAT.md](docs/CARD_FORMAT.md). Tóm tắt: một ảnh PNG bình thường, nối sau là khối `3DMRCARD` gồm manifest JSON và các file model (nén deflate, có SHA-256 cho từng file), cuối cùng là 16 byte kết thúc. Trình xem ảnh vẫn hiện bức ảnh như thường.
+Xem [docs/CARD_FORMAT.md](docs/CARD_FORMAT.md). Tóm tắt: một ảnh PNG bình thường, nối sau là khối `3DMRCARD` gồm manifest JSON (thông tin, thông số, nhóm vật lý và vùng va chạm) và các file model (nén deflate, có SHA-256 cho từng file), cuối cùng là 16 byte kết thúc. Trình xem ảnh vẫn hiện bức ảnh như thường.
 
 ## Tôn trọng điều khoản của model
 
@@ -31,12 +37,12 @@ Card chứa toàn bộ model. Chỉ chia sẻ card của model cho phép phân p
 
 ## Dự kiến
 
-- Thêm kiểu tóc, món trang phục và dáng mặt cho cơ thể gốc; texture cho da và quần áo.
+- Trình tạo nhân vật trên model gốc mới (cơ thể và mặt, kèm tóc, quần áo, vật lý cơ thể dạng bộ phận), mẫu nữ và nam, dựng lại nhân vật từ card ILLGAMES. Bản đầu tiên đang tắt để chờ model đó.
 - Mẫu tư thế và góc máy cho ảnh card.
 
 ## Phát triển
 
-Không cần build. Mở thư mục qua HTTP (`npm run serve`, rồi vào http://localhost:8000) và sửa các file trong `src/`. `npm test` chạy test định dạng card (Node 22).
+Không cần build. Mở thư mục qua HTTP (`npm run serve`, rồi vào http://localhost:8000) và sửa các file trong `src/`. `npm test` chạy test định dạng card và card ILLGAMES (Node 22). GitHub Pages tự đăng nhánh `main` sau khi test qua.
 
 three.js và three-vrm được đặt sẵn trong `vendor/` để trang chạy không cần CDN. Xem [THIRD_PARTY.md](THIRD_PARTY.md).
 

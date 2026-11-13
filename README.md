@@ -2,28 +2,34 @@
 
 [Tiếng Việt](README.vi.md)
 
-A browser tool for making **model cards** for the [3D Model Renderer](https://github.com/intorbmn/3d-model-renderer) Minecraft mod. A card is a PNG picture of the character with the whole model (mesh, textures and settings) packed inside, the same idea as Koikatsu character cards. Share one file, drop it into the mod's `Cards` folder, done.
+A browser tool for making **model cards** for the [3D Model Renderer](https://github.com/intorbmn/3d-model-renderer) Minecraft mod. A card is a PNG picture of the character with the whole model (mesh, textures, settings and physics) packed inside, the same idea as Koikatsu character cards. Share one file, drop it into the mod's `3d-skin/Cards` folder, done.
 
 **Open the studio:** https://intorbmn.github.io/3d-model-renderer-studio/
 
 Everything runs in your browser. Nothing is uploaded.
 
-## What it does
+## Using it
 
-- **Create a character** from the built-in base body (no clothes, no detail on the body, only a face), with a **female** and a **male** preset. Shape it with sliders the way the character makers of ILLGAMES titles work: body, face, hair (style, length, colour) and clothing (top, skirt/shorts/trousers). Hair, skirt and bust come with physics bones.
-- **Physics groups**: hair, clothing, body and custom groups of spring-bone chains, found from the bone names (or a VRM's own spring bones), tuned per group, previewed live and written into the card, where the mod recognises them. Add your own groups from any bone.
-- **ILLGAMES cards** (Koikatsu, Koikatsu Sunshine, AI Shoujo / Honey Select 2, Honey Come, Summer Vacation Scramble, ...): those cards hold maker settings, not a 3D model, so the studio rebuilds the character on its base body from the proportions and colours in the card.
-- **Export the model** as GLB, glTF, OBJ, STL or PLY (OBJ/STL/PLY in the current pose), or download the original file.
+1. **Open a model**: *Open model folder* (pick the folder so the textures come along), *Open files*, or drag the folder onto the view. The studio takes the same types as the mod: **PMX, PMD, VRM, GLB, glTF**.
+2. **Check it moves**: pick a motion at the bottom (the mod's idle, walk, sprint, sneak, swim, crawl, elytra, ride, sleep and swing) or load your own `.vmd`. For non-MMD skeletons the status bar says whether the mod recognises the rig.
+3. **Fill in the card** (*Card* tab): name, model author, terms of use, source, notes, overall size.
+4. **Physics** (*Physics* tab), for VRM, GLB and glTF models:
+   - Spring-bone chains are sorted into **hair**, **clothing**, **body** and **custom** groups from the bone names, or taken from a VRM's own spring bones. *Detect again* starts over.
+   - Per group: on/off, stiffness, drag, gravity, hit radius, and which colliders it bumps into.
+   - **Add a custom group** from any root bone (the chain follows its children).
+   - **Collision**: colliders on the head, neck, spine, chest, hips, arms and legs keep hair and clothes out of the body. Resize them, add one on any bone, and turn on *Show colliders* to see them.
+   - *Preview* runs the physics live while the motion plays.
+   - PMX/PMD models keep the rigid-body physics in their file; the mod runs that.
+5. **Colours** tab: a tint per material (the mod applies the same tints) and an expression preview.
+6. **Export card**. Re-open a card later with *Open card* to change it.
 
-- Opens the same model types as the mod: **PMX, PMD, VRM, GLB, glTF** (pick the whole model folder so textures come along, or drag it in).
-- Previews the model with the mod's default motions (idle, walk, sprint, sneak, swim, crawl, elytra, ride, sleep, swing) or any `.vmd` you load. Non-MMD rigs are retargeted the same way the mod does it, and the status bar tells you whether the mod will be able to animate the skeleton.
-- Lets you edit the card: name, model author, terms of use, source, notes, overall size and a colour tint per material (the mod applies the same tints). Expression sliders are a preview.
-- Exports the card as a PNG. Re-open a card later to change it.
-- For an exact copy of a Koikatsu character, export it to PMX with the KKBP exporter in the game and open that PMX here.
+**Export model** saves the model as GLB, glTF, OBJ, STL or PLY (OBJ/STL/PLY in the pose on screen), or the original file.
+
+**ILLGAMES cards** (Koikatsu, Koikatsu Sunshine, AI Shoujo / Honey Select 2, Honey Come, Summer Vacation Scramble, ...) are recognised and read, but they hold settings for the game's character maker, not a 3D model. Until the studio has its base model back, export the character to PMX (for Koikatsu: the KKBP exporter) and open that.
 
 ## Card format
 
-See [docs/CARD_FORMAT.md](docs/CARD_FORMAT.md). In short: a normal PNG, followed by a `3DMRCARD` block with a JSON manifest and the model files (deflate-compressed, with a SHA-256 per file), followed by a 16-byte trailer. Image viewers just show the picture.
+See [docs/CARD_FORMAT.md](docs/CARD_FORMAT.md). In short: a normal PNG, followed by a `3DMRCARD` block with a JSON manifest (details, settings, physics groups and colliders) and the model files (deflate-compressed, SHA-256 per file), followed by a 16-byte trailer. Image viewers just show the picture.
 
 ## Respect model licences
 
@@ -31,12 +37,12 @@ A card contains the full model. Only share cards for models whose terms allow re
 
 ## Planned
 
-- More hair styles, clothing pieces and face shapes for the base body; textures for skin and clothing.
+- A character maker on a new base model (body and face, with hair, clothing and body physics as parts), female and male presets, and ILLGAMES cards rebuilt on it. The first version is switched off while it waits for that model.
 - Pose and camera presets for the card picture.
 
 ## Development
 
-No build step. Serve the folder over HTTP (`npm run serve`, then open http://localhost:8000) and edit the files in `src/`. `npm test` runs the card format tests (Node 22).
+No build step. Serve the folder over HTTP (`npm run serve`, then open http://localhost:8000) and edit the files in `src/`. `npm test` runs the card and ILLGAMES card tests (Node 22). GitHub Pages deploys `main` after the tests pass.
 
 three.js and three-vrm are vendored under `vendor/` so the site works without a CDN. See [THIRD_PARTY.md](THIRD_PARTY.md).
 
