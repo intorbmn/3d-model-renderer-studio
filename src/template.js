@@ -394,19 +394,26 @@ export function buildCharacter(input) {
   if (p.top === 'shirt') {
     const end = Math.round(range(p.topLength, 3, 1));
     const rings = torsoRings(1.06, end, torsoProfile.length - 1);
-    // Cover the bust: widen the chest rings in front.
-    for (const ring of rings) {
-      if (!hasBust || ring.center.y < bustY - bustR * 1.6 || ring.center.y > bustY + bustR * 1.6) continue;
-      ring.rz = Math.max(ring.rz, bustZ * 0.75 + bustR * 1.6);
-      ring.rx = Math.max(ring.rx, 0.06 * s + bustR * 1.15);
-    }
     parts.top.tube(rings, 20);
+    // Cloth over the bust: a slightly larger copy of each breast in the shirt's material,
+    // weighted like the breast so it moves with it.
+    for (const [side, sign] of hasBust ? [['L', 1], ['R', -1]] : []) {
+      const c = v(sign * 0.06 * s, bustY, bustZ * 0.75 + bustR * 0.45);
+      const root = sk.world(`Breast_${side}`);
+      const tip = sk.world(`Breast_${side}_end`);
+      const span = tip.distanceTo(root) || 1;
+      parts.top.ellipsoid(c, v(bustR * 1.12, bustR * 1.08, bustR * 1.06), (pos) => {
+        const t = Math.min(1, Math.max(0, pos.distanceTo(root) / span));
+        return [[B('Chest'), 1 - t], [B(`Breast_${side}`), t]];
+      }, 8, 12);
+    }
     for (const [side, sign] of [['Left', 1], ['Right', -1]]) {
-      const x0 = sign * (shoulderHalf - 0.03 * s);
+      // Short sleeves: start at the shoulder joint so they turn with the arm instead of flapping.
+      const x0 = sign * (shoulderHalf + 0.005 * s);
       const x1 = sign * (shoulderHalf + upperArmLen * 0.45);
       parts.top.tube([
-        { center: v(x0, armY), rx: armR * 1.55, rz: armR * 1.55, axis: 'x', weights: [[B(`${side}UpperArm`), 1]] },
-        { center: v(x1, armY), rx: armR * 1.35, rz: armR * 1.35, axis: 'x', weights: [[B(`${side}UpperArm`), 1]] },
+        { center: v(x0, armY), rx: armR * 1.3, rz: armR * 1.3, axis: 'x', weights: [[B(`${side}UpperArm`), 1]] },
+        { center: v(x1, armY), rx: armR * 1.2, rz: armR * 1.2, axis: 'x', weights: [[B(`${side}UpperArm`), 1]] },
       ], 10, { flip: sign < 0 });
     }
   }

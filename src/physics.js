@@ -10,6 +10,7 @@
 import * as THREE from 'three';
 import {
   VRMSpringBoneCollider,
+  VRMSpringBoneColliderHelper,
   VRMSpringBoneColliderShapeCapsule,
   VRMSpringBoneColliderShapeSphere,
   VRMSpringBoneJoint,
@@ -118,51 +119,75 @@ export function detectGroups(model, tuning = {}) {
   return { version: 1, groups, colliders };
 }
 
+/** Which of the default colliders each kind of group bumps into. */
+const COLLIDERS_FOR = {
+  hair: /^(head|neck|chest|spine|(left|right)(UpperArm|Shoulder))$/,
+  clothing: /^(hips|spine|chest|(left|right)(UpperLeg|LowerLeg))$/,
+  body: /^$/,
+  custom: /./,
+};
+
 export function makeGroup(name, kind, chains, colliders, tuning = {}) {
   const d = { ...DEFAULTS[kind], ...tuning };
-  const useColliders = colliders
-    .filter((c) => (kind === 'body' ? false : kind === 'clothing' ? /leg|hips/i.test(c.name) || c.name === 'chest' : true))
-    .map((c) => c.name);
+  const pattern = COLLIDERS_FOR[kind] ?? COLLIDERS_FOR.custom;
   return {
     name, kind, enabled: true,
     stiffness: d.stiffness, drag: d.drag, gravity: d.gravity, gravityDir: [0, -1, 0], radius: d.radius,
-    chains, colliders: useColliders,
+    chains, colliders: colliders.filter((c) => pattern.test(c.name)).map((c) => c.name),
   };
 }
 
-/** Head, chest, hips and leg colliders from the humanoid skeleton, sized from the model. */
+/** A collider entry; offsets are given in world axes and stored along the bone's own axes. */
+export function makeCollider(model, name, bone, radius, worldOffset = new THREE.Vector3(), worldTail = null) {
+  const rootScale = model.root.scale.x || 1;
+  const q = bone.getWorldQuaternion(new THREE.Quaternion()).invert();
+  const local = (v) => v.clone().divideScalar(rootScale).applyQuaternion(q).toArray().map((x) => Number(x.toFixed(5)));
+  return {
+    name, bone: model.originalName?.(bone) ?? bone.name,
+    offset: local(worldOffset), radius: Number(radius.toFixed(5)),
+    tail: worldTail ? local(worldTail) : null,
+  };
+}
+
+/** A capsule from `bone` to its first child bone, or a sphere when it has none. */
+export function colliderForBone(model, name, bone, radius) {
+  const child = bone.children.find((c) => c.isBone);
+  if (!child) return makeCollider(model, name, bone, radius);
+  const a = bone.getWorldPosition(new THREE.Vector3());
+  const b = child.getWorldPosition(new THREE.Vector3());
+  return makeCollider(model, name, bone, radius, new THREE.Vector3(), b.sub(a));
+}
+
+/** Body colliders from the humanoid skeleton (head, neck, torso, arms, legs), sized from the model. */
 export function defaultColliders(model) {
   const h = model.rawHumanoid ?? model.humanoid;
   if (!h || h.size === 0) return [];
   const rootScale = model.root.scale.x || 1;
   const box = new THREE.Box3().setFromObject(model.root);
   const height = (box.max.y - box.min.y) / rootScale;
+  const world = (name) => h.get(name)?.getWorldPosition(new THREE.Vector3());
   const out = [];
-  const add = (name, humanoidName, worldOffset, radius, worldTail = null) => {
-    const bone = h.get(humanoidName);
-    if (!bone) return;
-    const q = bone.getWorldQuaternion(new THREE.Quaternion()).invert();
-    const local = (v) => v.clone().applyQuaternion(q).toArray().map((x) => Number(x.toFixed(5)));
-    out.push({
-      name, bone: model.originalName?.(bone) ?? bone.name,
-      offset: local(worldOffset), radius: Number(radius.toFixed(5)),
-      tail: worldTail ? local(worldTail) : null,
-    });
+  const sphere = (name, bone, offsetY, radius) => {
+    if (h.get(bone)) out.push(makeCollider(model, name, h.get(bone), radius * height, new THREE.Vector3(0, offsetY * height * rootScale, 0)));
   };
-  const v = (x, y, z) => new THREE.Vector3(x, y, z).multiplyScalar(height);
-  add('head', 'head', v(0, 0.05, 0), 0.07 * height);
-  add('chest', h.has('upperChest') ? 'upperChest' : 'chest', v(0, 0, 0), 0.09 * height, v(0, 0.06, 0));
-  add('hips', 'hips', v(0, 0, 0), 0.1 * height);
+  // A capsule along the bone from `from` to `to` (both humanoid names).
+  const capsule = (name, from, to, radius) => {
+    const a = world(from);
+    const b = world(to);
+    if (!a || !b) return;
+    out.push(makeCollider(model, name, h.get(from), radius * height, new THREE.Vector3(), b.sub(a)));
+  };
+  sphere('head', 'head', 0.05, 0.07);
+  capsule('neck', 'neck', 'head', 0.03);
+  const chest = h.has('upperChest') ? 'upperChest' : 'chest';
+  capsule('spine', 'hips', h.has('chest') ? 'chest' : 'spine', 0.085);
+  capsule('chest', chest, h.has('neck') ? 'neck' : 'head', 0.09);
+  sphere('hips', 'hips', -0.02, 0.095);
   for (const side of ['left', 'right']) {
-    // Thighs: capsules down the upper leg, for skirts.
-    const upper = h.get(`${side}UpperLeg`);
-    const lower = h.get(`${side}LowerLeg`);
-    if (upper && lower) {
-      const a = upper.getWorldPosition(new THREE.Vector3());
-      const b = lower.getWorldPosition(new THREE.Vector3());
-      add(`${side}Leg`, `${side}UpperLeg`, new THREE.Vector3(), 0.055 * height, b.sub(a).divideScalar(rootScale));
-    }
-    add(`${side}Arm`, `${side}UpperArm`, v(0, 0, 0), 0.03 * height);
+    capsule(`${side}UpperLeg`, `${side}UpperLeg`, `${side}LowerLeg`, 0.055);
+    capsule(`${side}LowerLeg`, `${side}LowerLeg`, `${side}Foot`, 0.04);
+    capsule(`${side}UpperArm`, `${side}UpperArm`, `${side}LowerArm`, 0.03);
+    capsule(`${side}LowerArm`, `${side}LowerArm`, `${side}Hand`, 0.025);
   }
   return out;
 }
@@ -226,6 +251,29 @@ export class PhysicsPreview {
     this.manager = null;
     this.objects = [];
     this.touched = new Set();
+    this.showColliders = false;
+    this.helpers = [];
+  }
+
+  /** Shows the colliders as wireframes in the scene. */
+  setShowColliders(show, scene) {
+    this.showColliders = show;
+    this.scene = scene ?? this.scene;
+    this.refreshHelpers();
+  }
+
+  refreshHelpers() {
+    for (const h of this.helpers) {
+      h.removeFromParent();
+      h.dispose?.();
+    }
+    this.helpers = [];
+    if (!this.showColliders || !this.scene) return;
+    for (const collider of this.colliders ?? []) {
+      const helper = new VRMSpringBoneColliderHelper(collider);
+      this.scene.add(helper);
+      this.helpers.push(helper);
+    }
   }
 
   apply(physics) {
@@ -267,6 +315,8 @@ export class PhysicsPreview {
         }
       }
     }
+    this.colliders = [...colliderByName.values()];
+    this.refreshHelpers();
     this.model.root.updateMatrixWorld(true);
     manager.setInitState();
     this.manager = manager;
@@ -286,6 +336,8 @@ export class PhysicsPreview {
   }
 
   dispose() {
+    this.colliders = [];
+    this.refreshHelpers();
     for (const o of this.objects) o.removeFromParent();
     this.objects = [];
     for (const bone of this.touched) bone.matrixAutoUpdate = true;

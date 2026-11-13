@@ -23,6 +23,8 @@ const STRINGS = {
     kind_hair: 'Tóc', kind_clothing: 'Quần áo', kind_body: 'Cơ thể', kind_custom: 'Tuỳ chỉnh',
     p_stiffness: 'Độ cứng', p_drag: 'Lực cản', p_gravity: 'Trọng lực', p_radius: 'Bán kính va chạm', remove: 'xoá',
     physicsChainFailed: 'Xương này không có xương con để tạo chuỗi vật lý.',
+    collidersTitle: 'Va chạm', collidersHint: 'Vùng va chạm giữ tóc, quần áo không xuyên qua người. Mỗi nhóm chọn vùng nó va vào.',
+    collidersShow: 'Hiện vùng va chạm', colliderBone: 'Thêm vùng va chạm ở xương', groupColliders: 'Va vào',
     illgamesCard: 'Card nhân vật {game}{name}. Card ILLGAMES chỉ chứa thông số cho trình tạo nhân vật của game, không có model 3D, nên studio dựng lại trên cơ thể gốc: dáng người, màu da, tóc và mắt. Kiểu tóc, mặt và trang phục chọn lại trong tab Nhân vật.',
     illgamesFailed: 'Không đọc được card ILLGAMES:',
     openFolder: 'Mở thư mục model', openFolderHint: 'Chọn thư mục chứa model và texture',
@@ -61,7 +63,7 @@ const STRINGS = {
     s_eyeSize: 'Eye size', s_eyeHeight: 'Eye height', s_eyeSpacing: 'Eye spacing',
     s_hairLength: 'Hair length', s_hairVolume: 'Hair volume', s_hairSoftness: 'Hair softness',
     s_topLength: 'Top length', s_bottomLength: 'Skirt/trouser length', s_clothingSoftness: 'Cloth softness',
-    c_skinColor: 'Skin', c_eyeColor: 'Eyes', c_hairColor: 'Hair', c_topColor: 'Top', c_bottomColor: 'Bottom',
+    c_skinColor: 'Skin', c_eyeColor: 'Eyes', c_hairColor: 'Hair', c_topColor: 'Top colour', c_bottomColor: 'Bottom colour',
     hairStyle: 'Hair style', top: 'Top', bottom: 'Bottom',
     o_none: 'None', o_short: 'Short', o_bob: 'Bob', o_long: 'Long', o_ponytail: 'Ponytail', o_twintails: 'Twin tails',
     o_shirt: 'Shirt', o_skirt: 'Skirt', o_shorts: 'Shorts', o_pants: 'Trousers',
@@ -72,6 +74,8 @@ const STRINGS = {
     kind_hair: 'Hair', kind_clothing: 'Clothing', kind_body: 'Body', kind_custom: 'Custom',
     p_stiffness: 'Stiffness', p_drag: 'Drag', p_gravity: 'Gravity', p_radius: 'Hit radius', remove: 'remove',
     physicsChainFailed: 'That bone has no child bone to make a physics chain.',
+    collidersTitle: 'Collision', collidersHint: 'Colliders keep hair and clothes from passing through the body. Each group picks the colliders it bumps into.',
+    collidersShow: 'Show colliders', colliderBone: 'Add a collider on bone', groupColliders: 'Collides with',
     illgamesCard: '{game} character card{name}. ILLGAMES cards only hold settings for the game\'s character maker, not a 3D model, so the studio rebuilds the character on the base body: proportions, skin, hair and eye colour. Pick hair style, face and clothing again in the Character tab.',
     illgamesFailed: 'Could not read the ILLGAMES card:',
     openFolder: 'Open model folder', openFolderHint: 'Pick the folder that holds the model and its textures',
@@ -104,7 +108,7 @@ let language = (() => {
     const saved = localStorage.getItem('studio.language');
     if (saved && STRINGS[saved]) return saved;
   } catch { /* storage unavailable */ }
-  return navigator.language?.toLowerCase().startsWith('vi') ? 'vi' : 'en';
+  return 'en';
 })();
 
 export const currentLanguage = () => language;

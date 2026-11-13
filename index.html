@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -105,6 +105,14 @@
           </label>
           <label class="field"><span data-i18n="physicsName">Tên nhóm</span><input id="physics-name" maxlength="80"></label>
           <button class="button small" id="physics-add" data-i18n="physicsAddButton">Thêm</button>
+        </div>
+        <div class="add-group">
+          <h3 data-i18n="collidersTitle">Va chạm</h3>
+          <p class="hint" data-i18n="collidersHint">Vùng va chạm giữ tóc, quần áo không xuyên qua người.</p>
+          <label class="check"><input type="checkbox" id="colliders-show"> <span data-i18n="collidersShow">Hiện vùng va chạm</span></label>
+          <div id="physics-colliders" class="list colliders"></div>
+          <label class="field"><span data-i18n="colliderBone">Thêm vùng va chạm ở xương</span><select id="collider-bone"></select></label>
+          <button class="button small" id="collider-add" data-i18n="physicsAddButton">Thêm</button>
         </div>
       </section>
 

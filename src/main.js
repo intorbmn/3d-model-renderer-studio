@@ -6,7 +6,7 @@ import {
   SLIDERS, HAIR_STYLES_ALL, TOPS, BOTTOMS, TEMPLATE_VERSION,
   presetParams, sanitiseParams, exportCharacterGlb, templatePhysicsTuning,
 } from './template.js';
-import { detectGroups, fromVrm, PhysicsPreview, toManifest, chainFrom, makeGroup, collectBones } from './physics.js';
+import { detectGroups, fromVrm, PhysicsPreview, toManifest, chainFrom, makeGroup, collectBones, colliderForBone } from './physics.js';
 import { detectIllgamesCard, readIllgamesCharacter } from './illgames.js';
 import { FORMATS, exportModel } from './export.js';
 
@@ -144,7 +144,8 @@ async function loadModel(fileSet, entry, info, prefix = 'model/', { keepCamera =
     showModelStatus(model);
     for (const id of ['export-card', 'retake', 'export-model', 'export-format']) $(id).disabled = false;
     $('tab-maker').hidden = !state.template;
-    if (state.template) buildMaker();
+    // Rebuilding the controls while a slider is being dragged would cut the drag short.
+    if (state.template && !keepCamera) buildMaker();
     if (!keepCamera) setTimeout(() => retakePreview(), 300);
   } catch (error) {
     console.error(error);
@@ -294,6 +295,7 @@ function setupPhysics(model, fromCard) {
     state.physics = fromVrm(model) ?? detectGroups(model, tuning);
   }
   state.physicsPreview = new PhysicsPreview(model);
+  state.physicsPreview.setShowColliders($('colliders-show').checked, viewer.scene);
   applyPhysics();
   renderPhysics();
   fillRootBones(model);
@@ -303,11 +305,20 @@ function mergePhysics(previous) {
   const bones = new Set(collectBones(viewer.model).map((b) => b.name));
   for (const group of state.physics.groups) {
     const old = previous.groups.find((g) => g.kind === group.kind && !g.custom);
-    if (old) Object.assign(group, { enabled: old.enabled, name: old.name, drag: old.drag, gravity: old.gravity, radius: old.radius });
+    if (old) Object.assign(group, { enabled: old.enabled, name: old.name, drag: old.drag, gravity: old.gravity, radius: old.radius, colliders: old.colliders });
   }
   for (const old of previous.groups.filter((g) => g.custom)) {
     if (old.chains.every((chain) => chain.every((b) => bones.has(b)))) state.physics.groups.push(old);
   }
+  // Colliders the user added or resized: keep them where their bone still exists.
+  for (const old of previous.colliders ?? []) {
+    if (!bones.has(old.bone)) continue;
+    const fresh = state.physics.colliders.find((c) => c.name === old.name);
+    if (fresh) fresh.radius = old.radius;
+    else state.physics.colliders.push(old);
+  }
+  const names = new Set(state.physics.colliders.map((c) => c.name));
+  for (const g of state.physics.groups) g.colliders = (g.colliders ?? []).filter((n) => names.has(n));
   applyPhysics();
   renderPhysics();
 }
@@ -324,6 +335,7 @@ function applyPhysics(delay = 0) {
 }
 
 function renderPhysics() {
+  renderColliders();
   const box = $('physics-groups');
   box.replaceChildren();
   if (!viewer.model) return;
@@ -363,21 +375,79 @@ function renderPhysics() {
     slider('drag', 1, 0.01);
     slider('gravity', 2, 0.01);
     slider('radius', Number((height * 0.05).toFixed(3)), Number((height * 0.0005).toFixed(5)));
+    const chips = el('div', { className: 'collider-chips' }, [el('span', { className: 'meta', textContent: t('groupColliders') })]);
+    for (const c of state.physics.colliders ?? []) {
+      const on = (group.colliders ?? []).includes(c.name);
+      const chip = el('button', { type: 'button', className: `chip small${on ? ' active' : ''}`, textContent: c.name });
+      chip.addEventListener('click', () => {
+        group.colliders = on ? group.colliders.filter((n) => n !== c.name) : [...(group.colliders ?? []), c.name];
+        applyPhysics();
+        renderPhysics();
+      });
+      chips.append(chip);
+    }
+    card.append(chips);
     box.append(card);
+  });
+}
+
+function renderColliders() {
+  const box = $('physics-colliders');
+  box.replaceChildren();
+  if (!viewer.model || viewer.model.kind === 'mmd' || !state.physics) return;
+  const height = viewer.modelHeight();
+  state.physics.colliders.forEach((c, index) => {
+    const input = el('input', { type: 'range', min: 0, max: Number((height * 0.2).toFixed(3)), step: Number((height * 0.001).toFixed(5)), value: c.radius });
+    input.addEventListener('input', () => {
+      c.radius = Number(input.value);
+      applyPhysics(120);
+    });
+    const remove = el('button', { type: 'button', textContent: t('remove') });
+    remove.addEventListener('click', () => {
+      state.physics.colliders.splice(index, 1);
+      for (const g of state.physics.groups) g.colliders = (g.colliders ?? []).filter((n) => n !== c.name);
+      applyPhysics();
+      renderPhysics();
+    });
+    box.append(el('div', { className: 'row' }, [
+      el('span', { className: 'label', textContent: `${c.name}${c.tail ? ' ⬭' : ' ●'}`, title: c.bone }), input, remove]));
   });
 }
 
 function fillRootBones(model) {
   const select = $('physics-root');
+  const colliderBone = $('collider-bone');
   select.replaceChildren();
+  colliderBone.replaceChildren();
   if (model.kind === 'mmd') return;
-  for (const { name } of collectBones(model)) select.append(new Option(name, name));
+  for (const { name } of collectBones(model)) {
+    select.append(new Option(name, name));
+    colliderBone.append(new Option(name, name));
+  }
 }
 
 $('physics-detect').addEventListener('click', () => {
   if (!viewer.model || viewer.model.kind === 'mmd') return;
   const tuning = state.template ? templatePhysicsTuning(state.template) : {};
   state.physics = detectGroups(viewer.model, tuning);
+  applyPhysics();
+  renderPhysics();
+});
+$('colliders-show').addEventListener('change', () => {
+  state.physicsPreview?.setShowColliders($('colliders-show').checked, viewer.scene);
+});
+$('collider-add').addEventListener('click', () => {
+  if (!viewer.model || viewer.model.kind === 'mmd') return;
+  const name = $('collider-bone').value;
+  const bone = collectBones(viewer.model).find((b) => b.name === name)?.bone;
+  if (!bone) return;
+  state.physics ??= { version: 1, groups: [], colliders: [] };
+  let label = name;
+  for (let i = 2; state.physics.colliders.some((c) => c.name === label); i++) label = `${name} ${i}`;
+  const collider = colliderForBone(viewer.model, label, bone, viewer.modelHeight() * 0.03);
+  state.physics.colliders.push(collider);
+  // New colliders apply to every group except body jiggle.
+  for (const g of state.physics.groups) if (g.kind !== 'body') g.colliders = [...(g.colliders ?? []), label];
   applyPhysics();
   renderPhysics();
 });
