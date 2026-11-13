@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>3D Model Renderer Studio</title>
+  <meta name="description" content="Tạo card model cho mod 3D Model Renderer: xem trước model, animation và chỉnh thông số.">
+  <link rel="stylesheet" href="src/styles.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three/three.module.js",
+      "three/addons/": "./vendor/three/examples/jsm/",
+      "@pixiv/three-vrm": "./vendor/three-vrm/three-vrm.module.min.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"></span>
+      <span class="brand-name">3D Model Renderer <b>Studio</b></span>
+    </div>
+    <div class="actions">
+      <label class="button" title="" data-i18n-title="openFolderHint">
+        <input type="file" id="pick-folder" webkitdirectory multiple hidden>
+        <span data-i18n="openFolder">Mở thư mục model</span>
+      </label>
+      <label class="button">
+        <input type="file" id="pick-files" multiple hidden accept=".pmx,.pmd,.vrm,.glb,.gltf,.bin,.png,.jpg,.jpeg,.bmp,.tga,.dds,.spa,.sph,.json">
+        <span data-i18n="openFiles">Mở file</span>
+      </label>
+      <label class="button">
+        <input type="file" id="pick-card" hidden accept=".png">
+        <span data-i18n="openCard">Mở card</span>
+      </label>
+      <button class="button primary" id="export-card" disabled data-i18n="exportCard">Xuất card</button>
+      <select id="language" aria-label="Language">
+        <option value="vi">Tiếng Việt</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel" id="side">
+      <section>
+        <h2 data-i18n="cardInfo">Thông tin card</h2>
+        <label class="field"><span data-i18n="name">Tên</span><input id="f-name" maxlength="80"></label>
+        <label class="field"><span data-i18n="author">Tác giả model</span><input id="f-author" maxlength="120"></label>
+        <label class="field"><span data-i18n="license">Điều khoản sử dụng</span><textarea id="f-license" rows="2" maxlength="2000"></textarea></label>
+        <label class="field"><span data-i18n="source">Nguồn</span><input id="f-source" maxlength="300"></label>
+        <label class="field"><span data-i18n="notes">Ghi chú</span><textarea id="f-notes" rows="2" maxlength="2000"></textarea></label>
+      </section>
+      <section>
+        <h2 data-i18n="adjust">Chỉnh model</h2>
+        <label class="field slider"><span data-i18n="scale">Kích thước</span>
+          <input type="range" id="f-scale" min="0.5" max="2" step="0.01" value="1">
+          <output id="o-scale">1.00</output>
+        </label>
+        <h3 data-i18n="colors">Màu theo material</h3>
+        <p class="hint" data-i18n="colorsHint">Nhân màu cho từng phần (da, tóc, mắt...). Mod áp dụng đúng các màu này.</p>
+        <div id="materials" class="list"></div>
+      </section>
+      <section>
+        <h2 data-i18n="expressions">Biểu cảm (xem trước)</h2>
+        <div id="expressions" class="list"></div>
+      </section>
+    </aside>
+
+    <section class="stage">
+      <div class="viewport" id="viewport">
+        <canvas id="canvas"></canvas>
+        <div class="empty" id="empty">
+          <p class="big" data-i18n="dropTitle">Kéo thả thư mục model hoặc card vào đây</p>
+          <p data-i18n="dropFormats">PMX · PMD · VRM · GLB · glTF · card PNG</p>
+        </div>
+        <div class="drop" id="drop" hidden><p data-i18n="dropNow">Thả để mở</p></div>
+      </div>
+      <div class="statusbar">
+        <span id="status" data-i18n="ready">Sẵn sàng</span>
+      </div>
+      <div class="motionbar">
+        <span data-i18n="motion">Động tác</span>
+        <select id="motion"></select>
+        <label class="button small">
+          <input type="file" id="pick-vmd" hidden accept=".vmd">
+          <span data-i18n="loadVmd">Tải VMD</span>
+        </label>
+        <button class="button small" id="play" data-i18n="pause">Tạm dừng</button>
+        <button class="button small" id="reframe" data-i18n="reframe">Căn khung</button>
+      </div>
+    </section>
+
+    <aside class="panel" id="card-side">
+      <h2 data-i18n="preview">Card</h2>
+      <canvas id="card-preview" width="504" height="704"></canvas>
+      <button class="button wide" id="retake" disabled data-i18n="retake">Chụp lại ảnh card</button>
+      <dl class="facts" id="facts"></dl>
+    </aside>
+  </main>
+
+  <dialog id="message">
+    <form method="dialog">
+      <p id="message-text"></p>
+      <button class="button primary">OK</button>
+    </form>
+  </dialog>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
