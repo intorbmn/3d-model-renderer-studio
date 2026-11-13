@@ -58,6 +58,7 @@ export class Viewer {
       this.model.mmdHelper?.update(delta);
       this.model.retarget?.update(delta);
       this.model.vrm?.update(delta);
+      this.afterAnimate?.(delta);
     }
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
@@ -78,7 +79,7 @@ export class Viewer {
   }
 
   /** Loads the model `entry` ({path, type}) of a FileSet. */
-  async load(fileSet, entry) {
+  async load(fileSet, entry, { keepCamera = false } = {}) {
     this.clear();
     const manager = new THREE.LoadingManager();
     const baseDir = entry.path.includes('/') ? entry.path.slice(0, entry.path.lastIndexOf('/')) : '';
@@ -100,7 +101,7 @@ export class Viewer {
     model.missing = [...missing];
     this.model = model;
     this.scene.add(model.root);
-    this.frameModel();
+    if (!keepCamera) this.frameModel();
     this.captureMaterialColors();
     return model;
   }
@@ -120,7 +121,13 @@ export class Viewer {
     const gltf = await loader.loadAsync(url);
     const vrm = gltf.userData.vrm ?? null;
     const root = new THREE.Group();
+    // GLTFLoader strips characters such as '.' from node names; the mod sees the original names.
+    const originalName = (object) => {
+      const index = gltf.parser.associations.get(object)?.nodes;
+      return gltf.parser.json.nodes?.[index]?.name ?? object.name;
+    };
     let humanoid = new Map();
+    const rawHumanoid = new Map();
     let complete = false;
     if (vrm) {
       VRMUtils.removeUnnecessaryVertices?.(gltf.scene);
@@ -129,17 +136,14 @@ export class Viewer {
       for (const name of Object.keys(vrm.humanoid.humanBones)) {
         const node = vrm.humanoid.getNormalizedBoneNode(name);
         if (node) humanoid.set(name, node);
+        const raw = vrm.humanoid.getRawBoneNode(name);
+        if (raw) rawHumanoid.set(name, raw);
       }
       complete = true;
     } else {
       root.add(gltf.scene);
       const bones = [];
       gltf.scene.traverse((o) => { if (o.isBone) bones.push(o); });
-      // GLTFLoader strips characters such as '.' from node names; the mod sees the original names.
-      const originalName = (bone) => {
-        const index = gltf.parser.associations.get(bone)?.nodes;
-        return gltf.parser.json.nodes?.[index]?.name ?? bone.name;
-      };
       const mapping = inferFromNames(bones.map(originalName));
       for (const [name, index] of mapping) humanoid.set(name, bones[index]);
       complete = isComplete(mapping);
@@ -149,7 +153,8 @@ export class Viewer {
     const height = Math.max(1e-4, box.max.y - box.min.y);
     // The mod treats one VRM metre as 12.5 MMD units, and scales a plain glTF to 20 units tall.
     const unit = vrm ? MMD_UNIT : height / GLTF_HEIGHT_UNITS;
-    const model = { kind: vrm ? 'vrm' : 'gltf', type, root, vrm, gltf, unit, humanoid, humanoidComplete: complete };
+    const model = { kind: vrm ? 'vrm' : 'gltf', type, root, vrm, gltf, unit, humanoid, humanoidComplete: complete, originalName,
+      rawHumanoid: vrm ? rawHumanoid : humanoid };
     if (complete) {
       model.retarget = new HumanoidRetarget(root, humanoid, unit);
       model.retarget.applyRestCorrection();
@@ -221,6 +226,13 @@ export class Viewer {
         if (tint) material.color.multiply(new THREE.Color(tint[0], tint[1], tint[2]));
       }
     }
+  }
+
+  /** Height of the model in its file's units (without the size slider). */
+  modelHeight() {
+    if (!this.model) return 1.6;
+    const box = new THREE.Box3().setFromObject(this.model.root);
+    return (box.max.y - box.min.y) / (this.model.root.scale.x || 1);
   }
 
   setScale(scale) {

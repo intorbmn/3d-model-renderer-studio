@@ -10,11 +10,16 @@ Everything runs in your browser. Nothing is uploaded.
 
 ## What it does
 
+- **Create a character** from the built-in base body (no clothes, no detail on the body, only a face), with a **female** and a **male** preset. Shape it with sliders the way the character makers of ILLGAMES titles work: body, face, hair (style, length, colour) and clothing (top, skirt/shorts/trousers). Hair, skirt and bust come with physics bones.
+- **Physics groups**: hair, clothing, body and custom groups of spring-bone chains, found from the bone names (or a VRM's own spring bones), tuned per group, previewed live and written into the card, where the mod recognises them. Add your own groups from any bone.
+- **ILLGAMES cards** (Koikatsu, Koikatsu Sunshine, AI Shoujo / Honey Select 2, Honey Come, Summer Vacation Scramble, ...): those cards hold maker settings, not a 3D model, so the studio rebuilds the character on its base body from the proportions and colours in the card.
+- **Export the model** as GLB, glTF, OBJ, STL or PLY (OBJ/STL/PLY in the current pose), or download the original file.
+
 - Opens the same model types as the mod: **PMX, PMD, VRM, GLB, glTF** (pick the whole model folder so textures come along, or drag it in).
 - Previews the model with the mod's default motions (idle, walk, sprint, sneak, swim, crawl, elytra, ride, sleep, swing) or any `.vmd` you load. Non-MMD rigs are retargeted the same way the mod does it, and the status bar tells you whether the mod will be able to animate the skeleton.
 - Lets you edit the card: name, model author, terms of use, source, notes, overall size and a colour tint per material (the mod applies the same tints). Expression sliders are a preview.
 - Exports the card as a PNG. Re-open a card later to change it.
-- Recognises Koikatsu cards and explains how to convert them: those cards only hold character-maker settings, not a 3D model, so export the character to PMX with the KKBP exporter first.
+- For an exact copy of a Koikatsu character, export it to PMX with the KKBP exporter in the game and open that PMX here.
 
 ## Card format
 
@@ -26,7 +31,7 @@ A card contains the full model. Only share cards for models whose terms allow re
 
 ## Planned
 
-- A built-in base model with Koikatsu-style sliders (body proportions, hair and outfit parts). Waiting on a model with a licence that allows bundling it, and on body-shape support in the mod's engine.
+- More hair styles, clothing pieces and face shapes for the base body; textures for skin and clothing.
 - Pose and camera presets for the card picture.
 
 ## Development

@@ -10,11 +10,16 @@ Mọi thứ chạy trong trình duyệt của bạn, không tải gì lên mạn
 
 ## Tính năng
 
+- **Tạo nhân vật** từ cơ thể gốc có sẵn (chưa có quần áo, không có chi tiết trên cơ thể, chỉ có mặt), với mẫu **nữ** và **nam**. Chỉnh bằng thanh trượt giống trình tạo nhân vật của các game ILLGAMES: cơ thể, mặt, tóc (kiểu, độ dài, màu), trang phục (áo, váy/quần đùi/quần dài). Tóc, váy và ngực có sẵn xương vật lý.
+- **Nhóm vật lý**: các chuỗi spring bone chia thành nhóm tóc, quần áo, cơ thể và tuỳ chỉnh; tự nhận diện theo tên xương (hoặc lấy spring bone có sẵn của VRM), chỉnh từng nhóm, xem trước trực tiếp và ghi vào card để mod nhận diện. Có thể tự thêm nhóm từ bất kỳ xương nào.
+- **Card ILLGAMES** (Koikatsu, Koikatsu Sunshine, AI Shoujo / Honey Select 2, Honey Come, Summer Vacation Scramble…): các card này chỉ chứa thông số cho trình tạo nhân vật, không có model 3D, nên studio dựng lại nhân vật trên cơ thể gốc theo tỉ lệ cơ thể và màu sắc trong card.
+- **Xuất model** ra GLB, glTF, OBJ, STL hoặc PLY (OBJ/STL/PLY theo tư thế hiện tại), hoặc tải file gốc.
+
 - Mở các loại model giống mod: **PMX, PMD, VRM, GLB, glTF** (chọn cả thư mục model để lấy kèm texture, hoặc kéo thả vào).
 - Xem trước model với các động tác mặc định của mod (đứng, đi, chạy, ngồi, bơi, bò, bay elytra, cưỡi, ngủ, vung tay) hoặc file `.vmd` bất kỳ. Bộ xương không phải MMD được chuyển động tác giống cách mod làm, và thanh trạng thái cho biết mod có cử động được bộ xương đó hay không.
 - Chỉnh card: tên, tác giả model, điều khoản sử dụng, nguồn, ghi chú, kích thước và màu cho từng material (mod áp dụng đúng các màu này). Thanh biểu cảm chỉ để xem trước.
 - Xuất card thành ảnh PNG. Mở lại card để sửa tiếp.
-- Nhận ra card Koikatsu và hướng dẫn cách chuyển: card Koikatsu chỉ chứa thông số cho trình tạo nhân vật, không có model 3D, nên cần xuất nhân vật ra PMX bằng KKBP exporter trước.
+- Muốn bản sao chính xác của nhân vật Koikatsu: xuất nhân vật ra PMX bằng KKBP exporter trong game rồi mở file PMX đó ở đây.
 
 ## Định dạng card
 
@@ -26,7 +31,7 @@ Card chứa toàn bộ model. Chỉ chia sẻ card của model cho phép phân p
 
 ## Dự kiến
 
-- Model mẫu có sẵn với thanh chỉnh kiểu Koikatsu (tỉ lệ cơ thể, tóc, trang phục). Đang chờ một model có giấy phép cho phép đóng gói kèm, và engine của mod hỗ trợ chỉnh dáng người.
+- Thêm kiểu tóc, món trang phục và dáng mặt cho cơ thể gốc; texture cho da và quần áo.
 - Mẫu tư thế và góc máy cho ảnh card.
 
 ## Phát triển

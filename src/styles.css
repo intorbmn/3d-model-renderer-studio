@@ -104,3 +104,40 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
   #card-side { border-left: 0; }
   #card-preview { max-width: 252px; }
 }
+
+/* Tabs, maker and physics panels */
+.tabs, .subtabs { display: flex; gap: 4px; margin: -4px 0 14px; border-bottom: 1px solid var(--line); }
+.tabs button, .subtabs button {
+  flex: 1; padding: 8px 4px; border: 0; background: none; color: var(--muted); font: inherit; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+}
+.tabs button.active, .subtabs button.active { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+.subtabs { margin: 10px 0 12px; }
+.subtabs button { font-size: 13px; }
+.panel .tab-panel + .tab-panel { margin-top: 0; padding-top: 0; border-top: 0; }
+.button.accent { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.split { display: inline-flex; gap: 4px; }
+.preset-row { display: flex; gap: 6px; align-items: center; }
+.preset-row > span { color: var(--muted); font-size: 12px; margin-right: 4px; }
+.chip { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 4px 12px; font: inherit; cursor: pointer; }
+.chip.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.maker-row { display: grid; grid-template-columns: 1fr 120px 2.5em; gap: 8px; align-items: center; margin-bottom: 8px; font-size: 13px; }
+.maker-row output { font-size: 12px; }
+.maker-row select, .maker-row input[type=color] { grid-column: 2 / 4; width: 100%; }
+.maker-row input[type=color] { height: 28px; border: 1px solid var(--line); border-radius: 6px; padding: 0; background: none; }
+.row-actions { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+.check { display: inline-flex; gap: 4px; align-items: center; font-size: 13px; }
+.groups { display: flex; flex-direction: column; gap: 10px; }
+.group { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; border-left: 4px solid var(--kind, var(--accent)); }
+.group[data-kind=hair] { --kind: #b07cf2; }
+.group[data-kind=clothing] { --kind: #3fa7d6; }
+.group[data-kind=body] { --kind: #ff8fab; }
+.group[data-kind=custom] { --kind: #f0a83c; }
+.group header { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+.group header input[type=text] { flex: 1; min-width: 0; font: inherit; font-weight: 600; border: 0; background: none; color: var(--ink); padding: 2px 0; }
+.group .badge { font-size: 11px; padding: 1px 6px; border-radius: 999px; background: var(--kind); color: #fff; white-space: nowrap; }
+.group .meta { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+.group .row button { font-size: 12px; }
+.add-group { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.add-group select, .add-group input { font: inherit; }
+.preset-choice { display: flex; gap: 8px; margin-top: 14px; }

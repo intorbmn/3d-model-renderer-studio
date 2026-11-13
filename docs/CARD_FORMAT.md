@@ -72,6 +72,42 @@ Image hosts and chat apps that re-encode pictures drop the payload: share cards 
 Readers must ignore manifest fields they do not know, so later versions can add settings without breaking
 older readers. A change that older readers cannot ignore increases `version`.
 
+## Physics groups (`physics`, optional)
+
+Spring-bone chains sorted into groups. The mod writes this object as `physics.json` next to the extracted
+model and runs it, for VRM, GLB and glTF models, in place of the model's own VRM spring bones. PMX and
+PMD models keep their rigid-body physics; their cards have no `physics` section.
+
+```json
+"physics": {
+  "version": 1,
+  "groups": [
+    { "name": "Hair", "kind": "hair", "enabled": true,
+      "stiffness": 0.9, "drag": 0.4, "gravity": 0.15, "gravityDir": [0, -1, 0], "radius": 0.015,
+      "chains": [["Hair_Back_L1_0", "Hair_Back_L1_1", "Hair_Back_L1_2"]],
+      "colliders": ["head", "chest"] }
+  ],
+  "colliders": [
+    { "name": "head", "bone": "Head", "offset": [0, 0.08, 0], "radius": 0.11, "tail": null },
+    { "name": "leftLeg", "bone": "LeftUpperLeg", "offset": [0, 0, 0], "radius": 0.09, "tail": [0, -0.38, 0] }
+  ]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `kind` | `hair`, `clothing`, `body` or `custom`. Unknown kinds are read as `custom`. |
+| `chains` | Bone names (glTF node names), root first. Each bone swings towards the next one. |
+| `stiffness`, `drag`, `gravity`, `gravityDir` | As in VRM spring bones: stiffness and gravity in metres per second for a human-sized model, drag 0..1. |
+| `radius` | Hit radius of the chain's joints, in the model file's units. |
+| `colliders[]` | Spheres (`tail` null) or capsules. `offset` and `tail` are relative to `bone`, along the bone's axes in the rest pose, in the file's units. |
+
+## Character maker (`template`, optional)
+
+Cards made from the studio's base body keep the maker's sliders so the character can be edited again:
+`"template": { "version": 1, "params": { "preset": "female", "height": 0.4, ... } }`. Readers other than the
+studio ignore it.
+
 ## Limits
 
 Readers reject a card when any of these hold:
@@ -83,7 +119,7 @@ Readers reject a card when any of these hold:
 - the total decompressed size exceeds 1 GiB, or there are more than 4096 files;
 - `model.path` is not one of the files.
 
-## Koikatsu cards
+## ILLGAMES / Koikatsu cards
 
 Koikatsu cards use the same trick (data appended after the PNG), but their data is a list of settings for
 Koikatsu's own character maker: slider values, outfit and accessory IDs. They contain no mesh, so a model
