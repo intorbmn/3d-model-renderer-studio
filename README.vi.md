@@ -38,11 +38,12 @@ Card chứa toàn bộ model. Chỉ chia sẻ card của model cho phép phân p
 ## Dự kiến
 
 - Trình tạo nhân vật trên model gốc mới (cơ thể và mặt, kèm tóc, quần áo, vật lý cơ thể dạng bộ phận), mẫu nữ và nam, dựng lại nhân vật từ card ILLGAMES. Bản đầu tiên đang tắt để chờ model đó.
+- Trình tạo animation: tạo dáng trên khung xương cơ bản (tên xương MMD, nên động tác dùng được cho mọi model mod cử động được), đặt keyframe trên timeline, rồi lưu vào card hoặc xuất VMD riêng để bỏ vào `3d-skin/EntityPlayer/<model>/` hay `3d-skin/CustomAnim/`. Phần nền đã có trong `src/rig/` và `src/animation/` (khung xương chuẩn, dữ liệu keyframe, ghi file VMD); giao diện trình tạo chưa làm.
 - Mẫu tư thế và góc máy cho ảnh card.
 
 ## Phát triển
 
-Không cần build. Mở thư mục qua HTTP (`npm run serve`, rồi vào http://localhost:8000) và sửa các file trong `src/`. `npm test` chạy test định dạng card và card ILLGAMES (Node 22). GitHub Pages tự đăng nhánh `main` sau khi test qua.
+Không cần build. Mở thư mục qua HTTP (`npm run serve`, rồi vào http://localhost:8000) và sửa các file trong `src/`. `npm test` chạy test định dạng card, card ILLGAMES và animation (Node 22). GitHub Pages tự đăng nhánh `main` sau khi test qua.
 
 three.js và three-vrm được đặt sẵn trong `vendor/` để trang chạy không cần CDN. Xem [THIRD_PARTY.md](THIRD_PARTY.md).
 

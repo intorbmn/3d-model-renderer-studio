@@ -102,6 +102,14 @@ PMD models keep their rigid-body physics; their cards have no `physics` section.
 | `radius` | Hit radius of the chain's joints, in the model file's units. |
 | `colliders[]` | Spheres (`tail` null) or capsules. `offset` and `tail` are relative to `bone`, along the bone's axes in the rest pose, in the file's units. |
 
+## Animations (by file placement)
+
+A card can carry its own motions without any extra manifest field: a VMD named after a mod slot
+(`idle.vmd`, `walk.vmd`, `sprint.vmd`, ... or a custom action name) placed in the same folder as the
+model file is played by the mod in place of its default for that slot, because the mod looks in the
+model folder before `3d-skin/CustomAnim` and `3d-skin/DefaultAnim`. The studio's animation editor
+(in progress, `src/animation/`) will write them there.
+
 ## Character maker (`template`, optional)
 
 Cards made from the studio's base body keep the maker's sliders so the character can be edited again:

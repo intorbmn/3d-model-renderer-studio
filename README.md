@@ -38,11 +38,12 @@ A card contains the full model. Only share cards for models whose terms allow re
 ## Planned
 
 - A character maker on a new base model (body and face, with hair, clothing and body physics as parts), female and male presets, and ILLGAMES cards rebuilt on it. The first version is switched off while it waits for that model.
+- An animation editor: pose a basic skeleton (MMD bone names, so motions work on every model the mod animates), key it on a timeline, and save the motion into the card or as a separate VMD for `3d-skin/EntityPlayer/<model>/` or `3d-skin/CustomAnim/`. The groundwork is in `src/rig/` and `src/animation/` (standard skeleton, keyframe data, VMD writer); the editor itself is not built yet.
 - Pose and camera presets for the card picture.
 
 ## Development
 
-No build step. Serve the folder over HTTP (`npm run serve`, then open http://localhost:8000) and edit the files in `src/`. `npm test` runs the card and ILLGAMES card tests (Node 22). GitHub Pages deploys `main` after the tests pass.
+No build step. Serve the folder over HTTP (`npm run serve`, then open http://localhost:8000) and edit the files in `src/`. `npm test` runs the card, ILLGAMES card and animation tests (Node 22). GitHub Pages deploys `main` after the tests pass.
 
 three.js and three-vrm are vendored under `vendor/` so the site works without a CDN. See [THIRD_PARTY.md](THIRD_PARTY.md).
 

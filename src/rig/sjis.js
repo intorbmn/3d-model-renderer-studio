@@ -1,0 +1,95 @@
+// Shift_JIS bytes of the MMD bone and morph names the studio writes into VMD files.
+// Browsers can decode Shift_JIS but not encode it, so the names are kept here pre-encoded.
+// Generated with Python's shift_jis codec; regenerate when adding names.
+
+const TABLE = {
+  '下半身': '89ba94bc9067',
+  '上半身': '8fe394bc9067',
+  '上半身2': '8fe394bc906732',
+  '上半身3': '8fe394bc906733',
+  '首': '8ef1',
+  '頭': '93aa',
+  '左肩': '8db68ca8',
+  '左腕': '8db69872',
+  '左ひじ': '8db682d082b6',
+  '左手首': '8db68ee88ef1',
+  '右肩': '89458ca8',
+  '右腕': '89459872',
+  '右ひじ': '894582d082b6',
+  '右手首': '89458ee88ef1',
+  '左足': '8db691ab',
+  '左ひざ': '8db682d082b4',
+  '左足首': '8db691ab8ef1',
+  '左つま先': '8db682c282dc90e6',
+  '右足': '894591ab',
+  '右ひざ': '894582d082b4',
+  '右足首': '894591ab8ef1',
+  '右つま先': '894582c282dc90e6',
+  '左目': '8db696da',
+  '右目': '894596da',
+  'あご': '82a082b2',
+  '左親指０': '8db690658e77824f',
+  '左親指１': '8db690658e778250',
+  '左親指２': '8db690658e778251',
+  '左人指１': '8db6906c8e778250',
+  '左人指２': '8db6906c8e778251',
+  '左人指３': '8db6906c8e778252',
+  '左中指１': '8db692868e778250',
+  '左中指２': '8db692868e778251',
+  '左中指３': '8db692868e778252',
+  '左薬指１': '8db696f28e778250',
+  '左薬指２': '8db696f28e778251',
+  '左薬指３': '8db696f28e778252',
+  '左小指１': '8db68fac8e778250',
+  '左小指２': '8db68fac8e778251',
+  '左小指３': '8db68fac8e778252',
+  '右親指０': '894590658e77824f',
+  '右親指１': '894590658e778250',
+  '右親指２': '894590658e778251',
+  '右人指１': '8945906c8e778250',
+  '右人指２': '8945906c8e778251',
+  '右人指３': '8945906c8e778252',
+  '右中指１': '894592868e778250',
+  '右中指２': '894592868e778251',
+  '右中指３': '894592868e778252',
+  '右薬指１': '894596f28e778250',
+  '右薬指２': '894596f28e778251',
+  '右薬指３': '894596f28e778252',
+  '右小指１': '89458fac8e778250',
+  '右小指２': '89458fac8e778251',
+  '右小指３': '89458fac8e778252',
+  '全ての親': '915382c482cc9065',
+  'センター': '835a8393835e815b',
+  'グルーブ': '834f838b815b8375',
+  '両目': '97bc96da',
+  '左足ＩＫ': '8db691ab8268826a',
+  '右足ＩＫ': '894591ab8268826a',
+  '左つま先ＩＫ': '8db682c282dc90e68268826a',
+  '右つま先ＩＫ': '894582c282dc90e68268826a',
+  '腰': '8d98',
+  '操作中心': '91808dec92869053',
+  '表情': '955c8fee',
+  'まばたき': '82dc82ce82bd82ab',
+  'あ': '82a0',
+  'い': '82a2',
+  'う': '82a4',
+  'え': '82a6',
+  'お': '82a8',
+  'にこり': '82c982b182e8',
+  '怒り': '937b82e8',
+  '困る': '8da282e9',
+  'ウィンク': '834583428393834e',
+  'ウィンク右': '834583428393834e8945',
+};
+
+/**
+ * `name` as Shift_JIS bytes. ASCII names are passed through; other names must be in the table.
+ * Returns null for a name that cannot be encoded.
+ */
+export function encodeShiftJis(name) {
+  if (Object.hasOwn(TABLE, name)) return Uint8Array.from(TABLE[name].match(/../g).map((h) => parseInt(h, 16)));
+  if (/^[\x20-\x7e]*$/.test(name)) return new TextEncoder().encode(name);
+  return null;
+}
+
+export const KNOWN_NAMES = Object.keys(TABLE);
