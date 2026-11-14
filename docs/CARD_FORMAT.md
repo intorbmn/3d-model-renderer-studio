@@ -82,7 +82,7 @@ PMD models keep their rigid-body physics; their cards have no `physics` section.
 "physics": {
   "version": 1,
   "groups": [
-    { "name": "Hair", "kind": "hair", "enabled": true,
+    { "name": "Hair", "kind": "hair", "enabled": true, "mode": "spring", "maxAngle": 80,
       "stiffness": 0.9, "drag": 0.4, "gravity": 0.15, "gravityDir": [0, -1, 0], "radius": 0.015,
       "chains": [["Hair_Back_L1_0", "Hair_Back_L1_1", "Hair_Back_L1_2"]],
       "colliders": ["head", "chest"] }
@@ -97,10 +97,14 @@ PMD models keep their rigid-body physics; their cards have no `physics` section.
 | Field | Meaning |
 |---|---|
 | `kind` | `hair`, `clothing`, `body` or `custom`. Unknown kinds are read as `custom`. |
-| `chains` | Bone names (glTF node names), root first. Each bone swings towards the next one. |
-| `stiffness`, `drag`, `gravity`, `gravityDir` | As in VRM spring bones: stiffness and gravity in metres per second for a human-sized model, drag 0..1. |
+| `chains` | Bone names (glTF node names), root first. Each bone swings towards the next one; the last bone is only the tail (it does not swing itself). |
+| `mode` | `spring` (hair, clothing, custom) or `jiggle` (body). Missing: `jiggle` for `body`, `spring` otherwise. |
+| `stiffness`, `drag`, `gravity`, `gravityDir` | `spring`: as in VRM spring bones, stiffness and gravity in metres per second for a human-sized model, drag 0..1. `jiggle`: a damped spring around the rest pose; stiffness 0..4 is the bounce (1 + 1.5 × stiffness Hz), drag 0..1 the damping (ratio 0.1 + 0.8 × drag), gravity the sag as a fraction of the bone length. |
+| `maxAngle` | Furthest a joint turns from its rest direction, in degrees. Missing: 25 for `body`, 70 for `clothing`, 80 otherwise. |
 | `radius` | Hit radius of the chain's joints, in the model file's units. |
-| `colliders[]` | Spheres (`tail` null) or capsules. `offset` and `tail` are relative to `bone`, along the bone's axes in the rest pose, in the file's units. |
+| `colliders[]` | Spheres (`tail` null) or capsules. `offset` and `tail` are relative to `bone`, along the bone's axes in the rest pose, in the file's units. A joint whose tail already sits inside a collider at rest is only kept from going deeper; collisions push the tail out on the side it came from. |
+
+The studio and the mod run the same solver at a fixed 60 Hz (at most four steps a frame).
 
 ## Character shape (`shape`, optional)
 
@@ -160,7 +164,21 @@ them in their slots again:
 | `outfitPart` | Pieces imported together share this number |
 | `outfitBone` (on bones) | A bone the outfit added to the skeleton |
 
-The character's own pieces that an imported piece replaces are listed in `shape.hidden.materials`.
+Pieces hidden in every outfit preset (or, without presets, hidden now) are listed in
+`shape.hidden.materials`; the mod removes them.
+
+## Outfit presets (`outfits`, optional)
+
+```json
+"outfits": { "version": 1, "default": 0, "presets": [
+  { "name": "Casual", "hidden": ["SVS m_cloth_cf_bra_base00_03 9340"] },
+  { "name": "Inner only", "hidden": ["SVS m_cloth_cf_top_tshirt00 9140"] }
+] }
+```
+
+Each preset names the materials it hides; the others are shown. The mod writes this object as
+`outfits.json` next to the extracted model, wears the `default` preset, and lets the player change
+it in game (config wheel → Outfit); the choice is kept per model.
 
 ## Character maker (`template`, obsolete)
 

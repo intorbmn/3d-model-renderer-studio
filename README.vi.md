@@ -19,13 +19,14 @@ Các model khác (GLB, VRM, PMX/PMD…) chỉ mở để **xem động tác**. T
 1. **Mở nhân vật**: *Open files* (hoặc kéo thả file vào khung xem) với file GLB xuất theo hướng dẫn bên dưới, hoặc *Open card* với card làm từ studio.
 2. **Xem nhân vật cử động**: chọn động tác ở dưới (idle, walk, sprint, sneak, swim, crawl, elytra, ride, sleep, swing của mod) hoặc tải file `.vmd` của bạn.
 3. **Điền thông tin card** (tab *Card*): tên, tác giả, điều khoản sử dụng, nguồn, ghi chú, kích thước.
-4. Tab **Nhân vật**:
-   - **Cơ thể** và **Mặt**: thanh trượt như trình tạo nhân vật của game (đầu, cổ, vai, ngực, eo, hông, vòng một, tay, chân; khuôn mặt, mắt, lông mày, mũi, miệng, tai). Mỗi thanh có ô nhập số để nhập giá trị chính xác (giá trị nhập tay có thể vượt hai đầu thanh trượt); nhấp đúp để đặt lại.
-   - **Outfit**: mỗi loại là một ô, gồm **tóc, áo, áo trong, quần/váy, quần trong, tất, giày, phụ kiện** (và các phần của cơ thể). Bấm vào ô để mở: ẩn/hiện từng món, xoá món đã nhập, hoặc nhập món mới vào ô đó. **Nhập outfit** nhận cả một file outfit (ví dụ KKBP xuất với `--only-outfit`), tự tách ra từng món và thay vào đúng ô. Tóc để riêng: tóc trong file outfit chỉ được dùng khi nhân vật chưa có tóc; muốn đổi tóc thì nhập vào ô Tóc.
-   - **Lưu mặc định** giữ các giá trị hiện tại (trong trình duyệt và trong card); **Về mặc định đã lưu** và **Về gốc** để hoàn tác khi thử nghiệm.
-5. Tab **Vật lý**: nhóm tóc, quần áo, cơ thể (ngực, mông) được nhận ra từ tên xương, kể cả xương của outfit; chỉnh độ cứng, lực cản, trọng lực, bán kính va chạm và vùng va chạm cho từng nhóm; thêm nhóm tuỳ chỉnh từ xương bất kỳ; vùng va chạm trên cơ thể. *Xem trước* chạy vật lý khi động tác đang phát.
-6. Tab **Màu**: màu theo từng material (mod áp dụng đúng các màu này) và xem trước biểu cảm.
-7. **Xuất card**. Nhân vật, outfit và mọi thông số đã chỉnh đều được lưu trong card; *Open card* mở lại tất cả, kể cả các ô outfit, để chỉnh tiếp.
+4. Tab **Nhân vật**: thanh trượt **Cơ thể** và **Mặt** như trình tạo nhân vật của game, chia theo từng phần (đầu và cổ, thân, ngực và mông, tay, chân; khuôn mặt, mắt, lông mày, mũi, miệng, tai). Mỗi thanh có ô nhập số để nhập giá trị chính xác (giá trị nhập tay có thể vượt hai đầu thanh trượt); nhấp đúp để đặt lại.
+5. Tab **Outfit**:
+   - **Các món**: mỗi loại là một ô, gồm **tóc, áo, áo trong, quần/váy, quần trong, tất, giày, phụ kiện** (và các phần của cơ thể). Bấm vào ô để mở: ẩn/hiện từng món, xoá món đã nhập, hoặc nhập món mới vào ô đó. **Nhập outfit** nhận cả một file outfit (ví dụ KKBP xuất với `--only-outfit`), tự tách ra từng món và đặt vào đúng ô; món cũ trong ô vẫn nằm trong card (bị ẩn), nên một card chứa được nhiều bộ đồ. Tóc để riêng: tóc trong file outfit chỉ được dùng khi nhân vật chưa có tóc.
+   - **Preset**: lưu bộ đồ đang mặc thành preset có tên, mặc lại, cập nhật, xoá và chọn preset mặc định. Trong game, mục **Trang phục** trong vòng cấu hình đổi giữa các preset của card.
+6. Tab **Vật lý**: nhóm tóc, quần áo, cơ thể (ngực, mông) được nhận ra từ tên xương, kể cả xương của outfit. Mở một nhóm để chỉnh: kiểu **Lò xo** cho tóc, quần áo (độ cứng, lực cản, trọng lực), kiểu **Nảy** cho ngực, mông (tốc độ nảy, độ nhanh dừng, độ chảy xuống), bán kính va chạm, **góc tối đa** và các vùng va chạm. Thêm nhóm tuỳ chỉnh từ xương bất kỳ; vùng va chạm trên cơ thể. *Xem trước* chạy đúng bộ giải vật lý của mod khi động tác đang phát.
+7. Tab **Màu**: màu theo từng material (mod áp dụng đúng các màu này) và xem trước biểu cảm.
+8. Thanh **Giá trị** ở dưới cùng: **Lưu** giữ các giá trị hiện tại (trong trình duyệt và trong card); **Về đã lưu** và **Về gốc** để hoàn tác khi thử nghiệm.
+9. **Xuất card**. Nhân vật, các bộ outfit, preset và mọi thông số đã chỉnh đều được lưu trong card; *Open card* mở lại tất cả, kể cả các ô outfit, để chỉnh tiếp.
 
 **Export model** lưu nhân vật cùng outfit ra GLB, glTF, OBJ, STL hoặc PLY (OBJ/STL/PLY theo tư thế đang hiện), hoặc file gốc.
 
@@ -33,7 +34,7 @@ Các model khác (GLB, VRM, PMX/PMD…) chỉ mở để **xem động tác**. T
 
 ## Model và trang phục từ game ILLGAMES
 
-Nhân vật và trang phục từ game ILLGAMES có thể xuất ra rồi đưa vào studio: cơ thể (kèm mặt) là nhân vật, còn mỗi bộ trang phục được nhập vào các ô **Outfit** trong tab **Nhân vật**. Quy trình đi qua Blender với [KKBP (KK Blender Porter Pack)](https://github.com/FlailingFog/KK-Blender-Porter-Pack), hỗ trợ Koikatsu và Koikatsu Sunshine (xem trang KKBP để biết các game và phiên bản được hỗ trợ), cùng script trong repo này (Blender 4.x/5.x).
+Nhân vật và trang phục từ game ILLGAMES có thể xuất ra rồi đưa vào studio: cơ thể (kèm mặt) là nhân vật, còn mỗi bộ trang phục được nhập vào trong tab **Outfit**. Quy trình đi qua Blender với [KKBP (KK Blender Porter Pack)](https://github.com/FlailingFog/KK-Blender-Porter-Pack), hỗ trợ Koikatsu và Koikatsu Sunshine (xem trang KKBP để biết các game và phiên bản được hỗ trợ), cùng script trong repo này (Blender 4.x/5.x).
 
 1. **Trong game**: xuất nhân vật bằng plugin exporter của KKBP (xem hướng dẫn của KKBP), mặc bộ trang phục bạn muốn.
 2. **Trong Blender**: import bản xuất đó bằng KKBP rồi lưu file `.blend`.
@@ -49,7 +50,7 @@ Nhân vật và trang phục từ game ILLGAMES có thể xuất ra rồi đưa 
    ```
 
    Lặp lại bước 1–3 với các bộ trang phục khác (hoặc nhân vật khác của cùng game) để có thêm outfit.
-4. **Trong studio**: mở `body.glb`, rồi vào **Nhân vật → Outfit**, bấm **Nhập outfit** với `outfit.glb`. Các món tự vào đúng ô và gắn vào xương của cơ thể, nên đi theo cơ thể, thanh chỉnh hình dáng, động tác và vật lý.
+4. **Trong studio**: mở `body.glb`, rồi vào **Outfit → Các món**, bấm **Nhập outfit** với `outfit.glb`. Các món tự vào đúng ô và gắn vào xương của cơ thể, nên đi theo cơ thể, thanh chỉnh hình dáng, động tác và vật lý.
 5. **Xuất card**: cơ thể và outfit được ghi thành một model với một khung xương, mod nạp như mọi model khác, outfit chuyển động theo xương và vật lý của cơ thể.
 
 File GLB giữ lại các xương hình dáng mà tab Character dùng, biểu cảm và xương tóc/váy/ngực cho vật lý, đồng thời đặt tên khung xương để mod nhận diện. File xuất trước ngày 14/11/2026 có xương phụ của khuỷu tay và cẳng tay bị gắn vào ngực, làm tay biến dạng sai khi cử động: hãy xuất lại bằng script hiện tại.

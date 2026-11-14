@@ -52,87 +52,109 @@
       <nav class="tabs" role="tablist" id="tabs">
         <button role="tab" data-tab="info" class="active" data-i18n="tabInfo">Card</button>
         <button role="tab" data-tab="maker" id="tab-maker" data-i18n="tabMaker">Nhân vật</button>
+        <button role="tab" data-tab="outfit" data-i18n="tabOutfit">Outfit</button>
         <button role="tab" data-tab="physics" data-i18n="tabPhysics">Vật lý</button>
         <button role="tab" data-tab="look" data-i18n="tabLook">Màu</button>
       </nav>
-      <div class="defaults-bar" id="defaults-bar" hidden>
+
+      <div class="tab-scroll">
+        <section class="tab-panel" data-panel="other" hidden>
+          <div class="box">
+            <h2 data-i18n="otherTitle">Animation preview only</h2>
+            <p class="hint" data-i18n="otherInfo"></p>
+            <p class="hint" data-i18n="otherAnimation"></p>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-panel="info">
+          <div class="box">
+            <h2 data-i18n="cardInfo">Thông tin card</h2>
+            <label class="field"><span data-i18n="name">Tên</span><input id="f-name" maxlength="80"></label>
+            <label class="field"><span data-i18n="author">Tác giả model</span><input id="f-author" maxlength="120"></label>
+            <label class="field"><span data-i18n="license">Điều khoản sử dụng</span><textarea id="f-license" rows="2" maxlength="2000"></textarea></label>
+            <label class="field"><span data-i18n="source">Nguồn</span><input id="f-source" maxlength="300"></label>
+            <label class="field"><span data-i18n="notes">Ghi chú</span><textarea id="f-notes" rows="2" maxlength="2000"></textarea></label>
+          </div>
+          <div class="box">
+            <label class="field slider"><span data-i18n="scale">Kích thước</span>
+              <input type="range" id="f-scale" min="0.5" max="2" step="0.01" value="1">
+              <output id="o-scale">1.00</output>
+            </label>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-panel="maker" hidden>
+          <div id="shape-maker">
+            <nav class="subtabs" id="shape-subtabs">
+              <button data-shape-sub="body" class="active" data-i18n="makerBody">Cơ thể</button>
+              <button data-shape-sub="face" data-i18n="makerFace">Mặt</button>
+            </nav>
+            <p class="hint" data-i18n="shapeHint">Chỉnh bằng xương hình dáng như trình tạo nhân vật của game. Card lưu thông số; mod áp dụng khi nạp model.</p>
+            <div id="shape-controls"></div>
+            <div class="row-actions">
+              <button class="button small" id="shape-reset" data-i18n="shapeReset">Đặt lại tất cả</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-panel="outfit" hidden>
+          <nav class="subtabs" id="outfit-subtabs">
+            <button data-outfit-sub="pieces" class="active" data-i18n="outfitPieces">Pieces</button>
+            <button data-outfit-sub="presets" data-i18n="outfitPresets">Presets</button>
+          </nav>
+          <div id="outfit-controls"></div>
+        </section>
+
+        <section class="tab-panel" data-panel="physics" hidden>
+          <div class="toolbar">
+            <button class="button small" id="physics-detect" data-i18n="physicsDetect">Tự nhận diện lại</button>
+            <label class="check"><input type="checkbox" id="physics-on" checked> <span data-i18n="physicsPreview">Xem trước</span></label>
+            <label class="check"><input type="checkbox" id="colliders-show"> <span data-i18n="collidersShow">Hiện vùng va chạm</span></label>
+          </div>
+          <p class="hint" data-i18n="physicsHint">Các nhóm vật lý được ghi vào card; mod tự nhận diện từng nhóm.</p>
+          <div id="physics-groups" class="groups"></div>
+          <details class="box fold">
+            <summary data-i18n="collidersTitle">Va chạm</summary>
+            <p class="hint" data-i18n="collidersHint">Vùng va chạm giữ tóc, quần áo không xuyên qua người.</p>
+            <div id="physics-colliders" class="list colliders"></div>
+            <label class="field"><span data-i18n="colliderBone">Thêm vùng va chạm ở xương</span><select id="collider-bone"></select></label>
+            <button class="button small" id="collider-add" data-i18n="physicsAddButton">Thêm</button>
+          </details>
+          <details class="box fold">
+            <summary data-i18n="physicsAdd">Thêm nhóm</summary>
+            <label class="field"><span data-i18n="physicsRoot">Xương gốc</span><select id="physics-root"></select></label>
+            <label class="field"><span data-i18n="physicsKind">Loại</span>
+              <select id="physics-kind">
+                <option value="hair" data-i18n="kind_hair">Tóc</option>
+                <option value="clothing" data-i18n="kind_clothing">Quần áo</option>
+                <option value="body" data-i18n="kind_body">Cơ thể</option>
+                <option value="custom" selected data-i18n="kind_custom">Tuỳ chỉnh</option>
+              </select>
+            </label>
+            <label class="field"><span data-i18n="physicsName">Tên nhóm</span><input id="physics-name" maxlength="80"></label>
+            <button class="button small" id="physics-add" data-i18n="physicsAddButton">Thêm</button>
+          </details>
+        </section>
+
+        <section class="tab-panel" data-panel="look" hidden>
+          <div class="box">
+            <h2 data-i18n="colors">Màu theo material</h2>
+            <p class="hint" data-i18n="colorsHint">Nhân màu cho từng phần (da, tóc, mắt...). Mod áp dụng đúng các màu này.</p>
+            <div id="materials" class="list"></div>
+          </div>
+          <div class="box">
+            <h2 data-i18n="expressions">Biểu cảm (xem trước)</h2>
+            <div id="expressions" class="list"></div>
+          </div>
+        </section>
+      </div>
+
+      <footer class="defaults-bar" id="defaults-bar" hidden>
+        <span class="defaults-label" data-i18n="defaultsLabel">Values</span>
         <button class="button small" id="defaults-save" data-i18n="defaultsSave" data-i18n-title="defaultsSaveHint">Lưu mặc định</button>
         <button class="button small" id="defaults-restore" disabled data-i18n="defaultsRestore" data-i18n-title="defaultsRestoreHint">Về mặc định đã lưu</button>
         <button class="button small" id="defaults-original" data-i18n="defaultsOriginal" data-i18n-title="defaultsOriginalHint">Về gốc</button>
-      </div>
-
-      <section class="tab-panel" data-panel="other" hidden>
-        <h2 data-i18n="otherTitle">Animation preview only</h2>
-        <p class="hint" data-i18n="otherInfo"></p>
-        <p class="hint" data-i18n="otherAnimation"></p>
-      </section>
-
-      <section class="tab-panel" data-panel="info">
-        <h2 data-i18n="cardInfo">Thông tin card</h2>
-        <label class="field"><span data-i18n="name">Tên</span><input id="f-name" maxlength="80"></label>
-        <label class="field"><span data-i18n="author">Tác giả model</span><input id="f-author" maxlength="120"></label>
-        <label class="field"><span data-i18n="license">Điều khoản sử dụng</span><textarea id="f-license" rows="2" maxlength="2000"></textarea></label>
-        <label class="field"><span data-i18n="source">Nguồn</span><input id="f-source" maxlength="300"></label>
-        <label class="field"><span data-i18n="notes">Ghi chú</span><textarea id="f-notes" rows="2" maxlength="2000"></textarea></label>
-        <label class="field slider"><span data-i18n="scale">Kích thước</span>
-          <input type="range" id="f-scale" min="0.5" max="2" step="0.01" value="1">
-          <output id="o-scale">1.00</output>
-        </label>
-      </section>
-
-      <section class="tab-panel" data-panel="maker" hidden>
-        <div id="shape-maker">
-          <p class="hint" data-i18n="shapeHint">Chỉnh bằng xương hình dáng như trình tạo nhân vật của game. Card lưu thông số; mod áp dụng khi nạp model.</p>
-          <nav class="subtabs" id="shape-subtabs">
-            <button data-shape-sub="body" class="active" data-i18n="makerBody">Cơ thể</button>
-            <button data-shape-sub="face" data-i18n="makerFace">Mặt</button>
-            <button data-shape-sub="outfit" data-i18n="makerOutfit">Outfit</button>
-          </nav>
-          <div id="shape-controls"></div>
-          <div class="row-actions">
-            <button class="button small" id="shape-reset" data-i18n="shapeReset">Đặt lại tất cả</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="tab-panel" data-panel="physics" hidden>
-        <p class="hint" data-i18n="physicsHint">Các nhóm vật lý được ghi vào card; mod tự nhận diện từng nhóm.</p>
-        <div class="row-actions">
-          <button class="button small" id="physics-detect" data-i18n="physicsDetect">Tự nhận diện lại</button>
-          <label class="check"><input type="checkbox" id="physics-on" checked> <span data-i18n="physicsPreview">Xem trước</span></label>
-        </div>
-        <div id="physics-groups" class="groups"></div>
-        <div class="add-group">
-          <h3 data-i18n="physicsAdd">Thêm nhóm</h3>
-          <label class="field"><span data-i18n="physicsRoot">Xương gốc</span><select id="physics-root"></select></label>
-          <label class="field"><span data-i18n="physicsKind">Loại</span>
-            <select id="physics-kind">
-              <option value="hair" data-i18n="kind_hair">Tóc</option>
-              <option value="clothing" data-i18n="kind_clothing">Quần áo</option>
-              <option value="body" data-i18n="kind_body">Cơ thể</option>
-              <option value="custom" selected data-i18n="kind_custom">Tuỳ chỉnh</option>
-            </select>
-          </label>
-          <label class="field"><span data-i18n="physicsName">Tên nhóm</span><input id="physics-name" maxlength="80"></label>
-          <button class="button small" id="physics-add" data-i18n="physicsAddButton">Thêm</button>
-        </div>
-        <div class="add-group">
-          <h3 data-i18n="collidersTitle">Va chạm</h3>
-          <p class="hint" data-i18n="collidersHint">Vùng va chạm giữ tóc, quần áo không xuyên qua người.</p>
-          <label class="check"><input type="checkbox" id="colliders-show"> <span data-i18n="collidersShow">Hiện vùng va chạm</span></label>
-          <div id="physics-colliders" class="list colliders"></div>
-          <label class="field"><span data-i18n="colliderBone">Thêm vùng va chạm ở xương</span><select id="collider-bone"></select></label>
-          <button class="button small" id="collider-add" data-i18n="physicsAddButton">Thêm</button>
-        </div>
-      </section>
-
-      <section class="tab-panel" data-panel="look" hidden>
-        <h3 data-i18n="colors">Màu theo material</h3>
-        <p class="hint" data-i18n="colorsHint">Nhân màu cho từng phần (da, tóc, mắt...). Mod áp dụng đúng các màu này.</p>
-        <div id="materials" class="list"></div>
-        <h3 data-i18n="expressions">Biểu cảm (xem trước)</h3>
-        <div id="expressions" class="list"></div>
-      </section>
+      </footer>
     </aside>
 
     <section class="stage">

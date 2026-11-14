@@ -2,7 +2,7 @@ import { Viewer } from './viewer.js';
 import { FileSet, filesFromDrop, extensionOf } from './files.js';
 import { writeCard, readCard, isCard, isPng, CardError } from './card.js';
 import { t, setLanguage, currentLanguage, applyTranslations } from './i18n.js';
-import { detectGroups, fromVrm, PhysicsPreview, toManifest, chainFrom, makeGroup, collectBones, colliderForBone } from './physics.js';
+import { detectGroups, fromVrm, PhysicsPreview, toManifest, chainFrom, makeGroup, collectBones, colliderForBone, modeOf, maxAngleOf } from './physics.js';
 import { detectIllgamesCard, readIllgamesCharacter } from './illgames.js';
 import { FORMATS, exportModel } from './export.js';
 import { ShapeMaker, listParts, partLabel, applyHidden } from './maker/shape.js';
@@ -34,6 +34,7 @@ const state = {
   shapeMaker: null, // character maker on shape bones (KKBP / ILLGAMES-style models)
   hiddenParts: new Set(), // material names hidden by the maker
   parts: [], // imported outfit pieces on the character
+  outfits: { default: 0, presets: [] }, // outfit presets: which pieces each outfit shows
   savedDefaults: null, // values the user saved to come back to
   original: null, // the model's own values
 };
@@ -182,7 +183,11 @@ async function loadModel(fileSet, entry, info, prefix = 'model/', { keepCamera =
     await selectMotion($('motion').value);
     showModelStatus(model);
     setMode(state.character);
-    if (state.character) buildShapeMaker();
+    state.outfits = readOutfits(info?.outfits);
+    if (state.character) {
+      buildShapeMaker();
+      buildOutfitTab();
+    }
     if (!keepCamera && state.character) setTimeout(() => retakePreview(), 300);
   } catch (error) {
     console.error(error);
@@ -229,27 +234,44 @@ function setupShapeMaker(model, fromCard) {
   applyHidden(model, state.hiddenParts);
 }
 
+/** Slider sections, like the games' character makers. */
+const SECTIONS = {
+  body: [['head', /^(head|neck)/], ['torso', /^(shoulderWidth|chest|waist|hip)/], ['bust', /^(bust|butt)/],
+    ['arms', /^(shoulderThickness|upperArm|forearm|hand)/], ['legs', /^(thigh|calf|ankle|leg)/]],
+  face: [['shape', /^(face|lowerFace|upperFace|jaw|chin|cheek)/], ['eyes', /^eye/], ['brows', /^brow/],
+    ['nose', /^nose/], ['mouth', /^mouth/], ['ears', /^ear/]],
+};
+
 function buildShapeMaker() {
   const maker = state.shapeMaker;
+  if (!maker) return;
   const box = $('shape-controls');
   box.replaceChildren();
+  if (!maker.groups().includes(shapeSub)) shapeSub = maker.groups()[0] ?? 'body';
   for (const b of document.querySelectorAll('[data-shape-sub]')) {
     b.classList.toggle('active', b.dataset.shapeSub === shapeSub);
-    b.hidden = b.dataset.shapeSub !== 'outfit' && !maker.groups().includes(b.dataset.shapeSub);
+    b.hidden = !maker.groups().includes(b.dataset.shapeSub);
   }
-  if (shapeSub === 'outfit') {
-    buildOutfit(box);
-    return;
-  }
-  for (const [id, group] of maker.sliders) {
-    if (group !== shapeSub) continue;
-    const controls = valueControl({
-      min: 0, max: 100, step: 1, value: Math.round(maker.value(id) * 100), typedMin: -100, typedMax: 200, digits: 0, reset: 50,
-      onChange: (v) => maker.setValue(id, v / 100),
-    });
-    box.append(el('div', { className: 'maker-row' }, [el('span', { textContent: t(`sh_${id}`) }), ...controls]));
+  const sliders = maker.sliders.filter(([, group]) => group === shapeSub);
+  const sections = SECTIONS[shapeSub] ?? [];
+  const sectionOf = (id) => sections.find(([, pattern]) => pattern.test(id))?.[0] ?? 'other';
+  const order = [...sections.map(([name]) => name), 'other'];
+  for (const section of order) {
+    const rows = sliders.filter(([id]) => sectionOf(id) === section);
+    if (rows.length === 0) continue;
+    const card = el('div', { className: 'box sliders' });
+    if (section !== 'other') card.append(el('h3', { textContent: t(`sec_${section}`) }));
+    for (const [id] of rows) {
+      const controls = valueControl({
+        min: 0, max: 100, step: 1, value: Math.round(maker.value(id) * 100), typedMin: -100, typedMax: 200, digits: 0, reset: 50,
+        onChange: (v) => maker.setValue(id, v / 100),
+      });
+      card.append(el('div', { className: 'maker-row' }, [el('span', { textContent: t(`sh_${id}`) }), ...controls]));
+    }
+    box.append(card);
   }
 }
+
 
 for (const b of document.querySelectorAll('[data-shape-sub]')) {
   b.addEventListener('click', () => {
@@ -263,6 +285,7 @@ $('shape-reset').addEventListener('click', () => {
   state.hiddenParts.clear();
   applyHidden(viewer.model, state.hiddenParts);
   buildShapeMaker();
+  buildOutfitTab();
 });
 
 // ---------- saved defaults
@@ -294,6 +317,7 @@ function applySnapshot(snap) {
   applyPhysics();
   renderPhysics();
   if (state.shapeMaker) buildShapeMaker();
+  if (state.character) buildOutfitTab();
 }
 
 const defaultsKey = () => `defaults:${state.entry?.path}:${viewer.model?.root ? viewer.modelHeight().toFixed(4) : ''}`;
@@ -338,7 +362,7 @@ function visibilityToggle(material, label) {
     if (input.checked) state.hiddenParts.delete(material);
     else state.hiddenParts.add(material);
     applyHidden(viewer.model, state.hiddenParts);
-    buildShapeMaker();
+    buildOutfitTab();
   });
   return el('label', { className: 'check part', title: material }, [input, ` ${label}`]);
 }
@@ -360,7 +384,8 @@ function buildOutfit(box) {
     const parts = state.parts.filter((p) => p.slot === slot);
     const mine = own.get(slot);
     if (slot === 'body' && mine.length === 0) continue;
-    const names = [...parts.map((p) => p.name), ...mine.filter((i) => !state.hiddenParts.has(i.material)).map((i) => i.label)];
+    const shown = (part) => part.materials.some((m) => !state.hiddenParts.has(m));
+    const names = [...parts.filter(shown).map((p) => p.name), ...mine.filter((i) => !state.hiddenParts.has(i.material)).map((i) => i.label)];
     const details = el('details', { className: 'slot', open: openSlots.has(slot) });
     details.addEventListener('toggle', () => { if (details.open) openSlots.add(slot); else openSlots.delete(slot); });
     details.append(el('summary', {}, [
@@ -379,6 +404,88 @@ function buildOutfit(box) {
     details.append(body);
     box.append(details);
   }
+}
+
+let outfitSub = 'pieces';
+
+function buildOutfitTab() {
+  const box = $('outfit-controls');
+  box.replaceChildren();
+  for (const b of document.querySelectorAll('[data-outfit-sub]')) b.classList.toggle('active', b.dataset.outfitSub === outfitSub);
+  if (!viewer.model || !state.character) return;
+  if (outfitSub === 'presets') buildPresets(box);
+  else buildOutfit(box);
+}
+for (const b of document.querySelectorAll('[data-outfit-sub]')) {
+  b.addEventListener('click', () => {
+    outfitSub = b.dataset.outfitSub;
+    buildOutfitTab();
+  });
+}
+
+/** The card's `outfits` section as the studio keeps it. */
+function readOutfits(section) {
+  const presets = (section?.presets ?? [])
+    .filter((p) => p && Array.isArray(p.hidden))
+    .map((p, i) => ({ name: String(p.name || t('presetAuto', { n: i + 1 })).slice(0, 60), hidden: p.hidden.map(String) }));
+  const index = Number(section?.default) || 0;
+  return { default: index >= 0 && index < presets.length ? index : 0, presets };
+}
+
+const sameSet = (a, b) => a.size === b.size && [...a].every((x) => b.has(x));
+
+function buildPresets(box) {
+  const outfits = state.outfits;
+  box.append(el('p', { className: 'hint', textContent: t('presetsHint') }));
+  const current = new Set(state.hiddenParts);
+  const worn = outfits.presets.findIndex((p) => sameSet(new Set(p.hidden), current));
+  if (outfits.presets.length === 0) box.append(el('p', { className: 'hint empty-note', textContent: t('presetNone') }));
+  outfits.presets.forEach((preset, index) => {
+    const card = el('div', { className: `box preset${index === worn ? ' worn' : ''}` });
+    const name = el('input', { type: 'text', value: preset.name, maxLength: 60, className: 'preset-name' });
+    name.addEventListener('change', () => { preset.name = name.value.trim() || t('presetAuto', { n: index + 1 }); });
+    const wear = el('button', { type: 'button', className: `button small${index === worn ? ' primary' : ''}`, textContent: t('presetWear') });
+    wear.addEventListener('click', () => {
+      state.hiddenParts = new Set(preset.hidden);
+      applyHidden(viewer.model, state.hiddenParts);
+      buildOutfitTab();
+    });
+    const update = el('button', { type: 'button', className: 'button small', textContent: t('presetUpdate'), title: t('presetUpdateHint') });
+    update.addEventListener('click', () => {
+      preset.hidden = [...state.hiddenParts];
+      buildOutfitTab();
+    });
+    const star = el('label', { className: 'check', title: t('presetDefaultHint') }, [
+      el('input', { type: 'radio', name: 'preset-default', checked: outfits.default === index }), ` ${t('presetDefault')}`]);
+    star.querySelector('input').addEventListener('change', () => { outfits.default = index; });
+    const remove = el('button', { type: 'button', className: 'link', textContent: t('presetDelete') });
+    remove.addEventListener('click', () => {
+      outfits.presets.splice(index, 1);
+      if (outfits.default >= outfits.presets.length) outfits.default = 0;
+      buildOutfitTab();
+    });
+    // What it wears, by slot.
+    const hidden = new Set(preset.hidden);
+    const wearing = [];
+    for (const part of state.parts) if (part.materials.some((m) => !hidden.has(m))) wearing.push(`${t(`slot_${part.slot}`)}: ${part.name}`);
+    for (const [slot, items] of outfitItems()) {
+      if (slot === 'body') continue;
+      for (const item of items) if (!hidden.has(item.material)) wearing.push(`${t(`slot_${slot}`)}: ${item.label}`);
+    }
+    card.append(
+      el('div', { className: 'preset-head' }, [name, wear]),
+      el('div', { className: 'meta', textContent: wearing.join(' · ') || '—' }),
+      el('div', { className: 'preset-actions' }, [star, update, remove]),
+    );
+    box.append(card);
+  });
+  const name = el('input', { type: 'text', placeholder: t('presetName'), maxLength: 60, className: 'preset-name' });
+  const save = el('button', { type: 'button', className: 'button small primary', textContent: t('presetSaveAs') });
+  save.addEventListener('click', () => {
+    outfits.presets.push({ name: name.value.trim() || t('presetAuto', { n: outfits.presets.length + 1 }), hidden: [...state.hiddenParts] });
+    buildOutfitTab();
+  });
+  box.append(el('div', { className: 'box' }, [el('div', { className: 'preset-new' }, [name, save])]));
 }
 
 /** Shows that a slot is taken by an imported piece: the character's own piece there is hidden. */
@@ -414,7 +521,8 @@ async function importOutfit(files, slot = null) {
       }
     }
     for (const [s, meshes] of pieces) {
-      for (const old of state.parts.filter((p) => p.slot === s)) takeOff(old);
+      // What the slot held stays in the card (hidden), so outfit presets can wear it again.
+      for (const old of state.parts.filter((p) => p.slot === s)) for (const m of old.materials) state.hiddenParts.add(m);
       const part = attachPart(model, meshes, s, name);
       part.fileSet = fileSet;
       state.parts.push(part);
@@ -452,14 +560,17 @@ function afterPartsChanged() {
   if (previous) mergePhysics(previous);
   else applyPhysics();
   fillRootBones(viewer.model);
-  if (state.shapeMaker) buildShapeMaker();
+  buildOutfitTab();
   renderFacts(viewer.model);
 }
 
 /** The card's `shape` section, or null when nothing is changed. */
 function shapeManifest() {
   const shape = state.shapeMaker ? state.shapeMaker.toManifest() : { version: 1, sliders: {}, bones: {} };
-  shape.hidden = { materials: [...state.hiddenParts], meshes: [] };
+  // The mod removes hidden pieces for good, so with outfit presets only pieces that no preset wears go.
+  let hidden = [...state.hiddenParts];
+  for (const preset of state.outfits.presets) hidden = hidden.filter((m) => preset.hidden.includes(m));
+  shape.hidden = { materials: hidden, meshes: [] };
   const changed = Object.keys(shape.bones).length || shape.hidden.materials.length || Object.keys(shape.sliders).length;
   return changed ? shape : null;
 }
@@ -516,7 +627,7 @@ function mergePhysics(previous) {
   const bones = new Set(collectBones(viewer.model).map((b) => b.name));
   for (const group of state.physics.groups) {
     const old = previous.groups.find((g) => g.kind === group.kind && !g.custom);
-    if (old) Object.assign(group, { enabled: old.enabled, name: old.name, drag: old.drag, gravity: old.gravity, radius: old.radius, colliders: old.colliders });
+    if (old) Object.assign(group, { enabled: old.enabled, name: old.name, stiffness: old.stiffness, drag: old.drag, gravity: old.gravity, radius: old.radius, mode: old.mode, maxAngle: old.maxAngle, colliders: old.colliders });
   }
   for (const old of previous.groups.filter((g) => g.custom)) {
     if (old.chains.every((chain) => chain.every((b) => bones.has(b)))) state.physics.groups.push(old);
@@ -545,6 +656,8 @@ function applyPhysics(delay = 0) {
   }, delay);
 }
 
+const openGroups = new Set();
+
 function renderPhysics() {
   renderColliders();
   const box = $('physics-groups');
@@ -560,27 +673,45 @@ function renderPhysics() {
   }
   const height = viewer.modelHeight();
   state.physics.groups.forEach((group, index) => {
-    const card = el('div', { className: 'group' });
+    const card = el('details', { className: 'group', open: openGroups.has(group.name) });
     card.dataset.kind = group.kind;
-    const enabled = el('input', { type: 'checkbox', checked: group.enabled });
+    card.addEventListener('toggle', () => { if (card.open) openGroups.add(group.name); else openGroups.delete(group.name); });
+    const enabled = el('input', { type: 'checkbox', checked: group.enabled, title: t('physicsEnabled') });
+    enabled.addEventListener('click', (e) => e.stopPropagation());
     enabled.addEventListener('change', () => { group.enabled = enabled.checked; applyPhysics(); });
-    const name = el('input', { type: 'text', value: group.name });
-    name.addEventListener('change', () => { group.name = name.value; });
-    const remove = el('button', { type: 'button', className: 'link', textContent: t('remove') });
-    remove.addEventListener('click', () => { state.physics.groups.splice(index, 1); applyPhysics(); renderPhysics(); });
-    card.append(el('header', {}, [enabled, name, el('span', { className: 'badge', textContent: t(`kind_${group.kind}`) }), remove]));
-    card.append(el('div', { className: 'meta', textContent: `${group.chains.length} ${t('physicsChains')} · ${group.chains.slice(0, 3).map((c) => c[0]).join(', ')}${group.chains.length > 3 ? '…' : ''}` }));
-    const slider = (key, max, step) => {
+    card.append(el('summary', {}, [
+      enabled,
+      el('span', { className: 'group-name', textContent: group.name }),
+      el('span', { className: 'badge', textContent: t(`kind_${group.kind}`) }),
+      el('span', { className: 'meta', textContent: `${group.chains.length} ${t('physicsChains')}` }),
+    ]));
+    const body = el('div', { className: 'group-body' });
+    const name = el('input', { type: 'text', value: group.name, className: 'group-rename' });
+    name.addEventListener('change', () => {
+      openGroups.delete(group.name);
+      group.name = name.value.trim() || group.name;
+      openGroups.add(group.name);
+      renderPhysics();
+    });
+    body.append(el('label', { className: 'field' }, [el('span', { textContent: t('physicsName') }), name]));
+    const mode = el('select');
+    for (const m of ['spring', 'jiggle']) mode.append(new Option(t(`mode_${m}`), m));
+    mode.value = modeOf(group);
+    mode.addEventListener('change', () => { group.mode = mode.value; applyPhysics(); renderPhysics(); });
+    body.append(el('label', { className: 'field' }, [el('span', { textContent: t('p_mode') }), mode]));
+    body.append(el('p', { className: 'hint', textContent: t(`modeHint_${modeOf(group)}`) }));
+    const slider = (key, max, step, digits = 2, value = group[key], set = (v) => { group[key] = v; }) => {
       const controls = valueControl({
-        min: 0, max, step, value: group[key], typedMin: 0, typedMax: max * 5, digits: key === 'radius' ? 4 : 2,
-        onChange: (v) => { group[key] = v; applyPhysics(120); },
+        min: 0, max, step, value, typedMin: 0, typedMax: max * 5, digits,
+        onChange: (v) => { set(v); applyPhysics(120); },
       });
-      card.append(el('div', { className: 'maker-row' }, [el('span', { textContent: t(`p_${key}`) }), ...controls]));
+      body.append(el('div', { className: 'maker-row' }, [el('span', { textContent: t(`p_${key}`) }), ...controls]));
     };
     slider('stiffness', 4, 0.05);
     slider('drag', 1, 0.01);
-    slider('gravity', 2, 0.01);
-    slider('radius', Number((height * 0.05).toFixed(3)), Number((height * 0.0005).toFixed(5)));
+    slider('gravity', modeOf(group) === 'jiggle' ? 0.5 : 2, 0.01);
+    slider('radius', Number((height * 0.05).toFixed(3)), Number((height * 0.0005).toFixed(5)), 4);
+    slider('maxAngle', 180, 1, 0, maxAngleOf(group), (v) => { group.maxAngle = Math.min(180, v); });
     const chips = el('div', { className: 'collider-chips' }, [el('span', { className: 'meta', textContent: t('groupColliders') })]);
     for (const c of state.physics.colliders ?? []) {
       const on = (group.colliders ?? []).includes(c.name);
@@ -592,7 +723,11 @@ function renderPhysics() {
       });
       chips.append(chip);
     }
-    card.append(chips);
+    body.append(chips);
+    const remove = el('button', { type: 'button', className: 'link danger', textContent: t('remove') });
+    remove.addEventListener('click', () => { state.physics.groups.splice(index, 1); applyPhysics(); renderPhysics(); });
+    body.append(el('div', { className: 'group-actions' }, [remove]));
+    card.append(body);
     box.append(card);
   });
 }
@@ -695,7 +830,7 @@ function buildMaterialList() {
       input.value = '#ffffff';
       viewer.applyTints(state.settings.materialTints);
     });
-    list.append(el('div', { className: 'row' }, [el('span', { className: 'label', textContent: name, title: name }), input, reset]));
+    list.append(el('div', { className: 'row' }, [el('span', { className: 'label', textContent: partLabel(name), title: name }), input, reset]));
   }
 }
 
@@ -818,6 +953,9 @@ async function exportCard() {
   const shape = viewer.model.kind !== 'mmd' ? shapeManifest() : null;
   if (shape) manifestExtras.shape = shape;
   if (state.savedDefaults) manifestExtras.editor = { version: 1, defaults: state.savedDefaults };
+  if (state.outfits.presets.length > 0) {
+    manifestExtras.outfits = { version: 1, default: state.outfits.default, presets: state.outfits.presets.map((p) => ({ name: p.name, hidden: [...p.hidden] })) };
+  }
   if (viewer.model.kind === 'gltf') {
     // The character and its outfit as one model with one skeleton, so the mod loads it like any
     // other and the outfit follows the body's bones and physics.
@@ -899,6 +1037,7 @@ $('language').addEventListener('change', () => {
     buildMaterialList();
     renderPhysics();
     if (state.shapeMaker) buildShapeMaker();
+    if (state.character) buildOutfitTab();
   }
 });
 applyTranslations();

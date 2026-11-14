@@ -19,13 +19,14 @@ Other models (GLB, VRM, PMX/PMD, ...) open for an **animation preview only**. In
 1. **Open a character**: *Open files* (or drag the file onto the view) with a GLB exported as described below, or *Open card* with a card made here.
 2. **Check it moves**: pick a motion at the bottom (the mod's idle, walk, sprint, sneak, swim, crawl, elytra, ride, sleep and swing) or load your own `.vmd`.
 3. **Fill in the card** (*Card* tab): name, author, terms of use, source, notes, overall size.
-4. **Character** tab:
-   - **Body** and **Face**: sliders like the games' character makers (head, neck, shoulders, chest, waist, hips, bust, arms, legs; face shape, eyes, brows, nose, mouth, ears). Every slider has a number box for exact values (typed values may go past the slider's ends); double-click a slider to reset it.
-   - **Outfit**: one box per slot, **hair, top, inner top, bottom, underwear, socks, shoes, accessory** (and the body's own pieces). Click a box to open it: show or hide each piece, remove an imported one, or import a piece into that slot. **Import outfit** takes a whole outfit file (for example a KKBP export made with `--only-outfit`), splits it into its pieces and puts each in its slot, in place of what the character wore there. Hair stays separate: an outfit's hair is only used when the character has none showing; import it into the Hair box to change hair.
-   - **Save defaults** keeps the current values (in this browser and in the card); **Back to saved** and **Back to original** undo experiments.
-5. **Physics** tab: hair, clothing and body (bust, hips) groups found from the bone names, including the outfit's own bones, with stiffness, drag, gravity, hit radius and colliders per group; custom groups from any root bone; collision shapes on the body. *Preview* runs the physics while the motion plays.
-6. **Colours** tab: a tint per material (the mod applies the same tints) and an expression preview.
-7. **Export card**. The character, its outfit and every value you set are saved in the card; *Open card* brings it all back, outfit slots included, to change it later.
+4. **Character** tab: **Body** and **Face** sliders like the games' character makers, grouped by part (head and neck, torso, bust and hips, arms, legs; face shape, eyes, brows, nose, mouth, ears). Every slider has a number box for exact values (typed values may go past the slider's ends); double-click a slider to reset it.
+5. **Outfit** tab:
+   - **Pieces**: one box per slot, **hair, top, inner top, bottom, underwear, socks, shoes, accessory** (and the body's own pieces). Click a box to open it: show or hide each piece, remove an imported one, or import a piece into that slot. **Import outfit** takes a whole outfit file (for example a KKBP export made with `--only-outfit`), splits it into its pieces and puts each in its slot; what the slot held before stays in the card, hidden, so several outfits can live in one card. Hair stays separate: an outfit's hair is only used when the character has none showing.
+   - **Presets**: save what the character wears as a named outfit, wear a preset again, update or remove it, and pick the default. In game, the config wheel's **Outfit** entry switches between the card's presets.
+6. **Physics** tab: hair, clothing and body (bust, hips) groups found from the bone names, including the outfit's own bones. Open a group to tune it: **Spring** motion for hair and clothes (stiffness, drag, gravity), **Jiggle** for bust and hips (bounce speed, settling, sag), hit radius, **max angle**, and the colliders it bumps into. Custom groups from any root bone; collision shapes on the body. *Preview* runs the same solver as the mod while the motion plays.
+7. **Colours** tab: a tint per material (the mod applies the same tints) and an expression preview.
+8. **Values** bar at the bottom: **Save** keeps the current values (in this browser and in the card); **Back to saved** and **Original** undo experiments.
+9. **Export card**. The character, its outfits, presets and every value you set are saved in the card; *Open card* brings it all back, outfit slots included, to change it later.
 
 **Export model** saves the character with its outfit as GLB, glTF, OBJ, STL or PLY (OBJ/STL/PLY in the pose on screen), or the original file.
 
@@ -33,7 +34,7 @@ Other models (GLB, VRM, PMX/PMD, ...) open for an **animation preview only**. In
 
 ## Models and outfits from ILLGAMES games
 
-Characters and their outfits from ILLGAMES games can be exported and brought into the studio: the body (with its face) is the character, and each outfit is imported onto it in the **Outfit** boxes of the **Character** tab. This goes through Blender with [KKBP (KK Blender Porter Pack)](https://github.com/FlailingFog/KK-Blender-Porter-Pack), which supports Koikatsu and Koikatsu Sunshine (see its page for the games and versions it supports), and the script in this repository (Blender 4.x/5.x).
+Characters and their outfits from ILLGAMES games can be exported and brought into the studio: the body (with its face) is the character, and each outfit is imported onto it in the **Outfit** tab. This goes through Blender with [KKBP (KK Blender Porter Pack)](https://github.com/FlailingFog/KK-Blender-Porter-Pack), which supports Koikatsu and Koikatsu Sunshine (see its page for the games and versions it supports), and the script in this repository (Blender 4.x/5.x).
 
 1. **In the game**: export the character with KKBP's exporter plugin (see KKBP's instructions), wearing the outfit you want.
 2. **In Blender**: import that export with KKBP and save the `.blend`.
@@ -49,7 +50,7 @@ Characters and their outfits from ILLGAMES games can be exported and brought int
    ```
 
    Repeat steps 1 to 3 with other outfits (or other characters of the same game) to collect more outfits.
-4. **In the studio**: open `body.glb`, then in **Character → Outfit** click **Import outfit** with `outfit.glb`. The pieces go to their slots and bind to the body's bones, so they follow the body, its shape sliders, the motions and the physics.
+4. **In the studio**: open `body.glb`, then in **Outfit → Pieces** click **Import outfit** with `outfit.glb`. The pieces go to their slots and bind to the body's bones, so they follow the body, its shape sliders, the motions and the physics.
 5. **Export card**: the body and the outfit are written as one model with one skeleton, which the mod loads like any other, the outfit moving with the body's bones and physics.
 
 The GLB keeps the shape bones the Character tab works with, the expressions and the hair/skirt/bust bones for physics, and gives the skeleton the names the mod recognises. Exports made before 14 November 2026 have the elbow and forearm helper bones attached to the chest, which bends the arms wrongly when they move: export them again with the current script.
