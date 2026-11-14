@@ -49,7 +49,7 @@ Characters and their outfits from ILLGAMES games can be exported and brought int
    blender --background character.blend --python tools/blender/export_kkbp_glb.py -- character.glb
    ```
 
-   Without the command line: install `tools/blender/export_kkbp_glb.py` as a Blender add-on (Edit → Preferences → Add-ons → Install from Disk) and use **File → Export → Body + outfit for 3D Model Renderer Studio**, or on Windows drag `.blend` files onto `tools/blender/kkbp_to_studio.bat` (kept next to the script). Both write `<name>_body.glb` and `<name>_outfit.glb` next to the `.blend`. The studio's **.blend → GLB** button has the downloads and these steps.
+   Without the command line: install `tools/blender/export_kkbp_glb.py` as a Blender add-on (Edit → Preferences → Add-ons → Install from Disk) and use **File → Export → Body + outfit for 3D Model Renderer Studio**, or on Windows drag `.blend` files onto `tools/blender/kkbp_to_studio.bat` (kept next to the script). Both write `<name>_body.glb` and `<name>_outfitNN.glb (one per outfit)` next to the `.blend`. The studio's **.blend → GLB** button has the downloads and these steps.
 
    Repeat steps 1 to 3 with other outfits (or other characters of the same game) to collect more outfits.
 4. **In the studio**: open `body.glb`, then in **Outfit → Pieces** click **Import outfit** with `outfit.glb`. The pieces go to their slots and bind to the body's bones, so they follow the body, its shape sliders, the motions and the physics.

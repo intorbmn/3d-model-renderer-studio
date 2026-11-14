@@ -522,6 +522,13 @@ async function importOutfit(files, slot = null) {
         hairKept = true;
       }
     }
+    // A whole outfit replaces every piece of clothing (and accessory), also in slots it leaves
+    // empty: a swimsuit takes the skirt off too. Hair stays unless the file brought hair.
+    const replaced = slot ? [slot] : SLOTS.filter((s) => s !== 'hair' || pieces.has('hair'));
+    for (const s of replaced) {
+      for (const old of state.parts.filter((p) => p.slot === s)) for (const m of old.materials) state.hiddenParts.add(m);
+      hideOwn(s, true);
+    }
     for (const [s, meshes] of pieces) {
       // What the slot held stays in the card (hidden), so outfit presets can wear it again.
       for (const old of state.parts.filter((p) => p.slot === s)) for (const m of old.materials) state.hiddenParts.add(m);

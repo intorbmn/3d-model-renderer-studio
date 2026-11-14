@@ -21,6 +21,8 @@ export const SLOTS = ['hair', 'top', 'innerTop', 'bottom', 'underwear', 'socks',
 
 // Order matters: the first match wins ("shoes_inner" is shoes, "bra" before "top").
 const SLOT_PATTERNS = [
+  // ILLGAMES accessories ("m_acs_…": ribbons, tails, ears, chokers, hair clips) before anything else.
+  ['accessory', /(^|[_ ])acs[_ ]/i],
   ['hair', /hair|kami|髪/i],
   ['shoes', /shoe|boot|sandal|sneaker|loafer|靴/i],
   ['socks', /sock|panst|stocking|tights|legwear|靴下/i],

@@ -16,13 +16,16 @@ Three ways to use it (Blender 4.x or 5.x):
 
   * As an add-on: Edit > Preferences > Add-ons > Install from Disk, pick this file and enable it.
     Then File > Export > "Body + outfit for 3D Model Renderer Studio" (or the Studio tab of the
-    3D view's sidebar) writes <name>_body.glb and <name>_outfit.glb next to the saved .blend.
+    3D view's sidebar) writes <name>_body.glb and <name>_outfitNN.glb next to the saved .blend.
   * On Windows, drag .blend files onto kkbp_to_studio.bat (kept next to this file).
   * From the command line:
         blender --background character.blend --python export_kkbp_glb.py -- output.glb [--no-outfit | --only-outfit]
 
 --no-outfit leaves the clothes and hair out (the body, with its face); --only-outfit writes just
-them, an outfit to import in the studio's Outfit tab.
+them, an outfit to import in the studio's Outfit tab (--outfit N: only "Outfit N"). With --split,
+`output` is a base name: it writes <base>_body.glb and one <base>_outfitNN.glb per outfit (KKBP's
+"Export all outfits" gives several; identical ones are written once). The add-on and the .bat use
+--split.
 
 Only use this on characters you are allowed to use; the result contains the game's assets.
 """
@@ -51,8 +54,12 @@ ALPHA_MATERIALS = re.compile(r"eyelash|mayuge|hitomi|eyelid|namida|eyeline|hair|
 def args():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     if not argv:
-        sys.exit("usage: blender --background file.blend --python export_kkbp_glb.py -- output.glb [--no-outfit | --only-outfit]")
-    return argv[0], "--no-outfit" in argv, "--only-outfit" in argv
+        sys.exit("usage: blender --background file.blend --python export_kkbp_glb.py -- "
+                 "output.glb [--no-outfit | --only-outfit | --outfit N]  or  -- base --split")
+    outfit = None
+    if "--outfit" in argv and argv.index("--outfit") + 1 < len(argv):
+        outfit = int(argv[argv.index("--outfit") + 1])
+    return argv[0], "--no-outfit" in argv, "--only-outfit" in argv, outfit, "--split" in argv
 
 
 def find_armatures():
@@ -283,12 +290,15 @@ def strip_rigify(rig, meta):
 
 
 def main():
-    output, no_outfit, only_outfit = args()
-    export(output, no_outfit, only_outfit)
+    output, no_outfit, only_outfit, outfit, split = args()
+    if split:
+        split_export(output)
+    else:
+        export(output, no_outfit, only_outfit, outfit)
 
 
-def export(output, no_outfit=False, only_outfit=False):
-    """Exports the open (KKBP) file. Changes the scene: run it on a file you do not save afterwards."""
+def prepare():
+    """Strips the rig and simplifies the materials once. Returns (armature, [character meshes])."""
     rigify, meta = find_armatures()
     # Rigify keeps the true rest pose of every deform bone (KKBP adjusts hair and accessory bones
     # after building the metarig), so the export uses the generated rig, stripped to its deform bones.
@@ -307,10 +317,6 @@ def export(output, no_outfit=False, only_outfit=False):
             continue
         if not any(m.type == "ARMATURE" and m.object is arm for m in obj.modifiers):
             continue
-        if no_outfit and obj.name.startswith("Outfit"):
-            continue
-        if only_outfit and not obj.name.startswith("Outfit"):
-            continue
         for modifier in list(obj.modifiers):
             if modifier.type in {"SOLIDIFY", "UV_WARP", "SUBSURF"}:
                 obj.modifiers.remove(modifier)  # outlines and eye UV tricks are not exported
@@ -322,15 +328,19 @@ def export(output, no_outfit=False, only_outfit=False):
         if name and obj.name.endswith(" " + name):
             obj.name = obj.name[: -len(name) - 1]
         meshes.append(obj)
+    return arm, meshes
 
+
+def write_glb(output, arm, meshes):
     print(f"meshes: {[m.name for m in meshes]}; bones: {len(arm.data.bones)}")
-
     bpy.ops.object.select_all(action="DESELECT")
     for obj in meshes + [arm]:
+        # KKBP keeps the other outfits in collections left out of the view layer.
+        if obj.name not in bpy.context.view_layer.objects:
+            bpy.context.scene.collection.objects.link(obj)
         obj.hide_set(False)
         obj.select_set(True)
     bpy.context.view_layer.objects.active = arm
-
     bpy.ops.export_scene.gltf(
         filepath=output,
         export_format="GLB",
@@ -348,26 +358,71 @@ def export(output, no_outfit=False, only_outfit=False):
     print(f"written {output}")
 
 
-# ---------- Blender add-on: one click writes both files, from a separate Blender process, so the
+def is_outfit(obj):
+    return obj.name.startswith("Outfit")
+
+
+def outfit_number(obj):
+    match = re.match(r"Outfit (\d+)", obj.name)
+    return int(match.group(1)) if match else None
+
+
+def export(output, no_outfit=False, only_outfit=False, outfit=None):
+    """Exports the open (KKBP) file. Changes the scene: run it on a file you do not save afterwards."""
+    arm, meshes = prepare()
+    if no_outfit:
+        meshes = [m for m in meshes if not is_outfit(m)]
+    if only_outfit or outfit is not None:
+        meshes = [m for m in meshes if is_outfit(m) and (outfit is None or outfit_number(m) == outfit)]
+    if not meshes:
+        sys.exit("nothing to export")
+    write_glb(output, arm, meshes)
+
+
+def outfit_signature(obj):
+    """What an outfit wears, by material name without KKBP's numbers (copies look the same)."""
+    return tuple(sorted({re.sub(r"(\.\d{3}|\s\d+)+$", "", s.material.name) for s in obj.material_slots
+                         if s.material and not s.material.name.startswith("Outline ")}))
+
+
+def split_export(base):
+    """Writes <base>_body.glb and one <base>_outfitNN.glb per different outfit. Returns the paths."""
+    arm, meshes = prepare()
+    outputs = []
+    body = [m for m in meshes if not is_outfit(m)]
+    if body:
+        outputs.append(base + "_body.glb")
+        write_glb(outputs[-1], arm, body)
+    seen = {}
+    for obj in sorted((m for m in meshes if is_outfit(m)), key=lambda m: m.name):
+        signature = outfit_signature(obj)
+        if signature in seen:
+            print(f"skipped {obj.name}: the same as {seen[signature]}")
+            continue
+        seen[signature] = obj.name
+        number = outfit_number(obj)
+        outputs.append(f"{base}_outfit{number:02d}.glb" if number is not None else f"{base}_outfit.glb")
+        write_glb(outputs[-1], arm, [obj])
+    return outputs
+
+
+# ---------- Blender add-on: one click writes the files, from a separate Blender process, so the
 # open scene is not changed.
 
 
 def export_both(blend_path, blender=None, script=None):
-    """Writes <name>_body.glb and <name>_outfit.glb next to `blend_path`. Returns their paths."""
+    """Writes <name>_body.glb and <name>_outfitNN.glb next to `blend_path`. Returns their paths."""
     blender = blender or bpy.app.binary_path
     script = script or os.path.abspath(__file__)
     base = os.path.splitext(blend_path)[0]
-    outputs = []
-    for suffix, flag in (("_body.glb", "--no-outfit"), ("_outfit.glb", "--only-outfit")):
-        output = base + suffix
-        result = subprocess.run(
-            [blender, "--background", blend_path, "--python", script, "--", output, flag],
-            capture_output=True, text=True,
-        )
-        if result.returncode != 0 or not os.path.isfile(output):
-            log = (result.stdout + result.stderr).strip().splitlines()[-15:]
-            raise RuntimeError(f"export of {os.path.basename(output)} failed:\n" + "\n".join(log))
-        outputs.append(output)
+    result = subprocess.run(
+        [blender, "--background", blend_path, "--python", script, "--", base, "--split"],
+        capture_output=True, text=True,
+    )
+    outputs = re.findall(r"^written (.+\.glb)$", result.stdout, re.M)
+    if result.returncode != 0 or not outputs:
+        log = (result.stdout + result.stderr).strip().splitlines()[-15:]
+        raise RuntimeError("export failed:\n" + "\n".join(log))
     return outputs
 
 
