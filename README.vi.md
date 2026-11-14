@@ -36,24 +36,33 @@ Các model khác (GLB, VRM, PMX/PMD…) chỉ mở để **xem động tác**. T
 
 Nhân vật và trang phục từ game ILLGAMES có thể xuất ra rồi đưa vào studio: cơ thể (kèm mặt) là nhân vật, còn mỗi bộ trang phục được nhập vào trong tab **Outfit**. Quy trình đi qua Blender với [KKBP (KK Blender Porter Pack)](https://github.com/FlailingFog/KK-Blender-Porter-Pack), hỗ trợ Koikatsu và Koikatsu Sunshine (xem trang KKBP để biết các game và phiên bản được hỗ trợ), cùng script trong repo này (Blender 4.x/5.x).
 
-1. **Trong game**: xuất nhân vật bằng plugin exporter của KKBP (xem hướng dẫn của KKBP), mặc bộ trang phục bạn muốn.
+1. **Trong game**: xuất nhân vật bằng plugin KKBP Exporter (xem hướng dẫn của KKBP). Bật **Export all outfits** để lấy hết các bộ đồ của card một lần, hoặc xuất từng bộ một.
 2. **Trong Blender**: import bản xuất đó bằng KKBP rồi lưu file `.blend`.
-3. **Xuất ra GLB** bằng script:
+3. **Tách thành cơ thể và các bộ outfit**, theo một trong ba cách. Cách nào cũng ghi ra cạnh file `.blend`:
+   - `<tên>_body.glb`: cơ thể kèm mặt, không quần áo, không tóc;
+   - `<tên>_outfit00.glb`, `<tên>_outfit01.glb`, ...: mỗi bộ đồ một file (quần áo, giày, phụ kiện và tóc). Bộ nào giống hệt bộ trước thì chỉ ghi một lần.
+
+   **a. Add-on Blender (nên dùng)**
+   1. Lấy file `export_kkbp_glb.py` (nút **.blend → GLB** trong studio, hoặc thư mục `tools/blender/` của repo này).
+   2. Trong Blender: **Edit → Preferences → Add-ons → Install from Disk**, chọn `export_kkbp_glb.py` và bật "3D Model Renderer Studio: KKBP body + outfit export". Khi cập nhật, gỡ (Remove) bản cũ trước.
+   3. Mở file `.blend` đã import bằng KKBP và lưu lại.
+   4. **File → Export → Body + outfit for 3D Model Renderer Studio (.glb)**, hoặc tab **Studio** ở thanh bên phải khung 3D (phím N) → **Export body + outfit**. Blender sẽ bận vài phút (lâu hơn nếu nhiều bộ đồ); xong sẽ hiện thông báo kèm tên các file. Cảnh đang mở không bị thay đổi vì việc xuất chạy trong một tiến trình Blender riêng.
+
+   **b. Windows, kéo thả**: để `kkbp_to_studio.bat` và `export_kkbp_glb.py` chung một thư mục rồi kéo một hoặc nhiều file `.blend` thả lên file `.bat`. Nó tự tìm Blender ở các chỗ cài thường gặp, không thấy thì hỏi đường dẫn tới `blender.exe` (hoặc đặt biến môi trường `BLENDER`).
+
+   **c. Dòng lệnh**
 
    ```
-   # chỉ cơ thể (có mặt, không quần áo, không tóc): nhân vật
+   # cơ thể + mỗi bộ đồ một file (giống add-on và file .bat)
+   blender --background character.blend --python tools/blender/export_kkbp_glb.py -- character --split
+   # chỉ cơ thể / chỉ outfit / chỉ bộ số 2 / tất cả trong một file
    blender --background character.blend --python tools/blender/export_kkbp_glb.py -- body.glb --no-outfit
-   # chỉ trang phục và tóc: outfit để nhập
    blender --background character.blend --python tools/blender/export_kkbp_glb.py -- outfit.glb --only-outfit
-   # tất cả trong một file
+   blender --background character.blend --python tools/blender/export_kkbp_glb.py -- outfit02.glb --outfit 2
    blender --background character.blend --python tools/blender/export_kkbp_glb.py -- character.glb
    ```
-
-   Không cần dòng lệnh: cài `tools/blender/export_kkbp_glb.py` làm add-on Blender (Edit → Preferences → Add-ons → Install from Disk) rồi dùng **File → Export → Body + outfit for 3D Model Renderer Studio**, hoặc trên Windows kéo file `.blend` thả lên `tools/blender/kkbp_to_studio.bat` (để cạnh script). Cả hai cách đều ghi `<tên>_body.glb` và `<tên>_outfitNN.glb (mỗi bộ đồ một file)` cạnh file `.blend`. Nút **.blend → GLB** trong studio có link tải và các bước này.
-
-   Lặp lại bước 1–3 với các bộ trang phục khác (hoặc nhân vật khác của cùng game) để có thêm outfit.
-4. **Trong studio**: mở `body.glb`, rồi vào **Outfit → Các món**, bấm **Nhập outfit** với `outfit.glb`. Các món tự vào đúng ô và gắn vào xương của cơ thể, nên đi theo cơ thể, thanh chỉnh hình dáng, động tác và vật lý.
-5. **Xuất card**: cơ thể và outfit được ghi thành một model với một khung xương, mod nạp như mọi model khác, outfit chuyển động theo xương và vật lý của cơ thể.
+4. **Trong studio**: mở `<tên>_body.glb` (*Mở file*). Vào **Outfit → Các món**, bấm **Nhập outfit** với `<tên>_outfit00.glb`: các món tự vào đúng ô (tóc, áo, áo trong, quần/váy, quần trong, tất, giày, phụ kiện) và gắn vào xương của cơ thể, nên đi theo cơ thể, thanh chỉnh hình dáng, động tác và vật lý. Vào **Outfit → Preset** lưu bộ đó thành một preset. Nhập file bộ tiếp theo (nó thay toàn bộ quần áo; bộ cũ vẫn nằm trong card, chỉ bị ẩn) rồi lưu thành preset khác, cứ thế tiếp tục.
+5. **Xuất card**: cơ thể và mọi bộ outfit được ghi thành một model với một khung xương, mod nạp như mọi model khác; trong game, mục **Trang phục** của vòng cấu hình đổi giữa các preset.
 
 File GLB giữ lại các xương hình dáng mà tab Character dùng, biểu cảm và xương tóc/váy/ngực cho vật lý, đồng thời đặt tên khung xương để mod nhận diện. File xuất trước ngày 14/11/2026 có xương phụ của khuỷu tay và cẳng tay bị gắn vào ngực, làm tay biến dạng sai khi cử động: hãy xuất lại bằng script hiện tại.
 

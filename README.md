@@ -36,24 +36,33 @@ Other models (GLB, VRM, PMX/PMD, ...) open for an **animation preview only**. In
 
 Characters and their outfits from ILLGAMES games can be exported and brought into the studio: the body (with its face) is the character, and each outfit is imported onto it in the **Outfit** tab. This goes through Blender with [KKBP (KK Blender Porter Pack)](https://github.com/FlailingFog/KK-Blender-Porter-Pack), which supports Koikatsu and Koikatsu Sunshine (see its page for the games and versions it supports), and the script in this repository (Blender 4.x/5.x).
 
-1. **In the game**: export the character with KKBP's exporter plugin (see KKBP's instructions), wearing the outfit you want.
+1. **In the game**: export the character with the KKBP Exporter plugin (see KKBP's instructions). Turn on **Export all outfits** to get every outfit of the card in one go, or export one outfit at a time.
 2. **In Blender**: import that export with KKBP and save the `.blend`.
-3. **Export to GLB** with the script:
+3. **Split it into a body and outfits**, in one of three ways. Each writes, next to the `.blend`:
+   - `<name>_body.glb`: the body with its face, no clothes or hair;
+   - `<name>_outfit00.glb`, `<name>_outfit01.glb`, ...: one file per outfit (clothes, shoes, accessories and hair). Outfits identical to an earlier one are written once.
+
+   **a. Blender add-on (recommended)**
+   1. Get `export_kkbp_glb.py` (the studio's **.blend → GLB** button, or `tools/blender/` in this repository).
+   2. In Blender: **Edit → Preferences → Add-ons → Install from Disk**, pick `export_kkbp_glb.py`, and enable "3D Model Renderer Studio: KKBP body + outfit export". To update it, remove the old one first.
+   3. Open the `.blend` imported by KKBP and save it.
+   4. **File → Export → Body + outfit for 3D Model Renderer Studio (.glb)**, or the **Studio** tab of the 3D view's sidebar (N key) → **Export body + outfit**. Blender is busy for a few minutes (longer with many outfits); a message lists the files when it is done. The open scene is not changed: the export runs in a separate Blender process.
+
+   **b. Windows, drag and drop**: put `kkbp_to_studio.bat` and `export_kkbp_glb.py` in one folder and drag one or more `.blend` files onto the `.bat`. It finds Blender in the usual places, or asks for the path to `blender.exe` (set the `BLENDER` environment variable to choose one).
+
+   **c. Command line**
 
    ```
-   # the body only (face included, no clothes or hair): the character
+   # body + one file per outfit (what the add-on and the .bat do)
+   blender --background character.blend --python tools/blender/export_kkbp_glb.py -- character --split
+   # only the body / only the outfits / only outfit 2 / everything in one file
    blender --background character.blend --python tools/blender/export_kkbp_glb.py -- body.glb --no-outfit
-   # the outfit and hair only: an outfit to import
    blender --background character.blend --python tools/blender/export_kkbp_glb.py -- outfit.glb --only-outfit
-   # everything in one file
+   blender --background character.blend --python tools/blender/export_kkbp_glb.py -- outfit02.glb --outfit 2
    blender --background character.blend --python tools/blender/export_kkbp_glb.py -- character.glb
    ```
-
-   Without the command line: install `tools/blender/export_kkbp_glb.py` as a Blender add-on (Edit → Preferences → Add-ons → Install from Disk) and use **File → Export → Body + outfit for 3D Model Renderer Studio**, or on Windows drag `.blend` files onto `tools/blender/kkbp_to_studio.bat` (kept next to the script). Both write `<name>_body.glb` and `<name>_outfitNN.glb (one per outfit)` next to the `.blend`. The studio's **.blend → GLB** button has the downloads and these steps.
-
-   Repeat steps 1 to 3 with other outfits (or other characters of the same game) to collect more outfits.
-4. **In the studio**: open `body.glb`, then in **Outfit → Pieces** click **Import outfit** with `outfit.glb`. The pieces go to their slots and bind to the body's bones, so they follow the body, its shape sliders, the motions and the physics.
-5. **Export card**: the body and the outfit are written as one model with one skeleton, which the mod loads like any other, the outfit moving with the body's bones and physics.
+4. **In the studio**: open `<name>_body.glb` (*Open files*). In **Outfit → Pieces**, click **Import outfit** with `<name>_outfit00.glb`: its pieces go to their slots (hair, top, inner top, bottom, underwear, socks, shoes, accessory) and bind to the body's bones, so they follow the body, its shape sliders, the motions and the physics. In **Outfit → Presets**, save it as a preset. Import the next outfit file (it replaces every piece of clothing; the old ones stay in the card, hidden) and save it as another preset, and so on.
+5. **Export card**: the body and all its outfits are written as one model with one skeleton, which the mod loads like any other; in game the config wheel's **Outfit** entry switches between the presets.
 
 The GLB keeps the shape bones the Character tab works with, the expressions and the hair/skirt/bust bones for physics, and gives the skeleton the names the mod recognises. Exports made before 14 November 2026 have the elbow and forearm helper bones attached to the chest, which bends the arms wrongly when they move: export them again with the current script.
 
