@@ -295,6 +295,8 @@ export class ShapeMaker {
       bone.quaternion.copy(rest.quaternion).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(d.x, d.y, d.z, 'XYZ')));
       bone.scale.copy(rest.scale).multiply(e.s);
     }
+    // The physics preview swings some of these bones (a bust): it starts from this pose.
+    for (const bone of this.rest.keys()) bone.userData.shapePose = { p: bone.position.clone(), q: bone.quaternion.clone() };
   }
 
   /** The card's `shape` section (without the hidden parts, added by the caller). */

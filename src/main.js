@@ -2,7 +2,7 @@ import { Viewer } from './viewer.js';
 import { FileSet, filesFromDrop, extensionOf } from './files.js';
 import { writeCard, readCard, isCard, isPng, CardError } from './card.js';
 import { t, setLanguage, currentLanguage, applyTranslations } from './i18n.js';
-import { detectGroups, fromVrm, PhysicsPreview, toManifest, chainFrom, makeGroup, collectBones, colliderForBone, modeOf, maxAngleOf } from './physics.js';
+import { detectGroups, fromVrm, PhysicsPreview, toManifest, chainFrom, makeGroup, collectBones, colliderForBone, modeOf, maxAngleOf, translationOf } from './physics.js';
 import { detectIllgamesCard, readIllgamesCharacter } from './illgames.js';
 import { FORMATS, exportModel } from './export.js';
 import { ShapeMaker, listParts, partLabel, applyHidden } from './maker/shape.js';
@@ -636,7 +636,7 @@ function mergePhysics(previous) {
   const bones = new Set(collectBones(viewer.model).map((b) => b.name));
   for (const group of state.physics.groups) {
     const old = previous.groups.find((g) => g.kind === group.kind && !g.custom);
-    if (old) Object.assign(group, { enabled: old.enabled, name: old.name, stiffness: old.stiffness, drag: old.drag, gravity: old.gravity, radius: old.radius, mode: old.mode, maxAngle: old.maxAngle, colliders: old.colliders });
+    if (old) Object.assign(group, { enabled: old.enabled, name: old.name, stiffness: old.stiffness, drag: old.drag, gravity: old.gravity, radius: old.radius, mode: old.mode, maxAngle: old.maxAngle, translation: old.translation, colliders: old.colliders });
   }
   for (const old of previous.groups.filter((g) => g.custom)) {
     if (old.chains.every((chain) => chain.every((b) => bones.has(b)))) state.physics.groups.push(old);
@@ -721,6 +721,7 @@ function renderPhysics() {
     slider('gravity', modeOf(group) === 'jiggle' ? 0.5 : 2, 0.01);
     slider('radius', Number((height * 0.05).toFixed(3)), Number((height * 0.0005).toFixed(5)), 4);
     slider('maxAngle', 180, 1, 0, maxAngleOf(group), (v) => { group.maxAngle = Math.min(180, v); });
+    if (modeOf(group) === 'jiggle') slider('translation', 1, 0.01, 2, translationOf(group), (v) => { group.translation = Math.min(1, v); });
     const chips = el('div', { className: 'collider-chips' }, [el('span', { className: 'meta', textContent: t('groupColliders') })]);
     for (const c of state.physics.colliders ?? []) {
       const on = (group.colliders ?? []).includes(c.name);

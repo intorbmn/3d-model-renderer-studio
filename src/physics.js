@@ -8,7 +8,9 @@
 //    takes some away, stiffness pushes it back towards the rest direction, gravity pulls it.
 //  * "jiggle" (body: bust, hips): a damped spring around the rest pose. Stiffness 0..4 sets the
 //    bounce (1..7 Hz), drag 0..1 how soon it settles, gravity how far it sags (a fraction of the
-//    bone length).
+//    bone length). Like the breast physics of character-action games (Zenless Zone Zero), the
+//    chain's first bone also moves on a position spring (`translation`, a fraction of its length),
+//    so the whole mass bounces and lags while the joints below add the swing.
 // Both run at a fixed 60 Hz, keep each joint within `maxAngle` of its rest direction, treat the
 // last bone of a chain as its tail only, and use colliders that know the rest pose (a tail inside a
 // collider at rest is only kept from going deeper) and push out on the side the tail came from.
@@ -38,13 +40,15 @@ const KIND_PATTERNS = [
 export const DEFAULTS = {
   hair: { stiffness: 1.0, drag: 0.45, gravity: 0.15, radius: 0.01, maxAngle: 80, mode: 'spring' },
   clothing: { stiffness: 0.8, drag: 0.5, gravity: 0.3, radius: 0.02, maxAngle: 70, mode: 'spring' },
-  body: { stiffness: 3.0, drag: 0.6, gravity: 0.06, radius: 0.0, maxAngle: 25, mode: 'jiggle' },
+  body: { stiffness: 2.5, drag: 0.5, gravity: 0.06, radius: 0.0, maxAngle: 20, mode: 'jiggle', translation: 0.3 },
   custom: { stiffness: 1.0, drag: 0.4, gravity: 0.1, radius: 0.01, maxAngle: 80, mode: 'spring' },
 };
 
 /** The motion of a group: "jiggle" for body groups unless set otherwise. */
 export const modeOf = (group) => group.mode ?? (group.kind === 'body' ? 'jiggle' : 'spring');
 export const maxAngleOf = (group) => group.maxAngle ?? DEFAULTS[group.kind]?.maxAngle ?? 80;
+/** How far a jiggle chain's first bone may move (bounce), as a fraction of its length. */
+export const translationOf = (group) => (modeOf(group) === 'jiggle' ? group.translation ?? (group.kind === 'body' ? 0.3 : 0) : 0);
 
 /** Bones that are never physics: ILLGAMES shape bones (except hair), weight helpers, anchors, hit boxes. */
 const NOT_PHYSICS = /^(cf_s_|cf_J_(?!hair)|k_f_|a_n_|cf_hit_|cf_d_hit)/;
@@ -135,6 +139,17 @@ export function detectGroups(model, tuning = {}) {
       used.add(current);
       chain.push(current);
     }
+    if (kind === 'body') {
+      // The whole breast moves, not only its tip: start from the bust bones of the same side
+      // above the chain (in KKBP files the base of the breast hangs from cf_s_bust00_L, beside
+      // cf_j_bust02_L). The unsided centre (cf_d_bust00) is not taken.
+      const side = sideOf(nameOf.get(root) ?? root.name);
+      for (let p = root.parent, n = 0; side && p?.isBone && n < 2; p = p.parent, n++) {
+        const name = nameOf.get(p) ?? p.name;
+        if (!/bust/i.test(name) || sideOf(name) !== side || bilateral(p)) break;
+        chain.unshift(p);
+      }
+    }
     if (chain.length >= 2) chainsByKind[kind].push(chain.map((b) => nameOf.get(b) ?? b.name));
   };
   const queue = [];
@@ -170,7 +185,7 @@ export function makeGroup(name, kind, chains, colliders, tuning = {}) {
   const d = { ...DEFAULTS[kind], ...tuning };
   const pattern = COLLIDERS_FOR[kind] ?? COLLIDERS_FOR.custom;
   return {
-    name, kind, enabled: true, mode: d.mode, maxAngle: d.maxAngle,
+    name, kind, enabled: true, mode: d.mode, maxAngle: d.maxAngle, ...(d.translation ? { translation: d.translation } : {}),
     stiffness: d.stiffness, drag: d.drag, gravity: d.gravity, gravityDir: [0, -1, 0], radius: d.radius,
     chains, colliders: colliders.filter((c) => pattern.test(c.name)).map((c) => c.name),
   };
@@ -284,6 +299,10 @@ export function chainFrom(model, rootName) {
 }
 
 const STEP = 1 / 60;
+
+// A joint's rest: the character maker's pose of the bone when it set one, else the pose at apply().
+const restQ = (joint) => joint.bone.userData.shapePose?.q ?? joint.initLocal;
+const restP = (joint) => joint.bone.userData.shapePose?.p ?? joint.bounce.restLocal;
 const MAX_STEPS = 4;
 const RESET_DISTANCE = 4;
 
@@ -403,6 +422,17 @@ export class PhysicsPreview {
           this.touched.add(bone);
         }
         if (joints.length === 0) continue;
+        const translation = translationOf(group);
+        if (jiggle && translation > 0) {
+          // The chain's first bone also bounces on a spring of its own (the whole mass moves).
+          const first = joints[0];
+          first.bounce = {
+            restLocal: first.bone.position.clone(),
+            position: first.bone.getWorldPosition(new THREE.Vector3()),
+            velocity: new THREE.Vector3(),
+            maxOffset: first.length * translation,
+          };
+        }
         this.chains.push({
           joints, colliders, jiggle,
           stiffness: jiggle ? group.stiffness : group.stiffness * rootScale,
@@ -440,7 +470,7 @@ export class PhysicsPreview {
   aim(joint, tail) {
     const bone = joint.bone;
     bone.parent.getWorldQuaternion(_p);
-    const baseline = _q.copy(_p).multiply(joint.initLocal);
+    const baseline = _q.copy(_p).multiply(restQ(joint));
     const from = _v.copy(joint.axis).applyQuaternion(baseline).normalize();
     const to = _w.copy(tail).sub(bone.getWorldPosition(new THREE.Vector3())).normalize();
     const world = new THREE.Quaternion().setFromUnitVectors(from, to).multiply(baseline);
@@ -463,9 +493,10 @@ export class PhysicsPreview {
     for (const chain of this.chains) {
       for (const joint of chain.joints) {
         const bone = joint.bone;
+        if (joint.bounce) this.bounce(chain, joint, h);
         const origin = bone.getWorldPosition(new THREE.Vector3());
         bone.parent.getWorldQuaternion(_p);
-        restDir.copy(joint.axis).applyQuaternion(_q.copy(_p).multiply(joint.initLocal)).normalize();
+        restDir.copy(joint.axis).applyQuaternion(_q.copy(_p).multiply(restQ(joint))).normalize();
         restTail.copy(origin).addScaledVector(restDir, joint.length);
         if (joint.current.distanceTo(origin) > joint.length * RESET_DISTANCE || !Number.isFinite(joint.current.x)) {
           joint.current.copy(restTail);
@@ -515,6 +546,28 @@ export class PhysicsPreview {
     }
   }
 
+  /** Moves a jiggle chain's first bone on its position spring (same as the mod). */
+  bounce(chain, joint, h) {
+    const b = joint.bounce;
+    const parent = joint.bone.parent;
+    const rest = restP(joint).clone().applyMatrix4(parent.matrixWorld);
+    if (!Number.isFinite(b.position.x) || b.position.distanceTo(rest) > b.maxOffset * 4 + 1e-4) {
+      b.position.copy(rest);
+      b.velocity.set(0, 0, 0);
+    }
+    const [omega, zeta] = jiggleConstants(chain.stiffness, chain.drag);
+    const target = rest.clone().addScaledVector(chain.gravityDir, chain.gravity * joint.length * 0.5);
+    const acceleration = target.sub(b.position).multiplyScalar(omega * omega).addScaledVector(b.velocity, -2 * zeta * omega);
+    b.velocity.addScaledVector(acceleration, h);
+    const next = b.position.clone().addScaledVector(b.velocity, h);
+    const offset = next.clone().sub(rest);
+    if (offset.length() > b.maxOffset) next.copy(rest).addScaledVector(offset.normalize(), b.maxOffset);
+    b.velocity.copy(next).sub(b.position).divideScalar(h);
+    b.position.copy(next);
+    joint.bone.position.copy(parent.worldToLocal(next.clone()));
+    joint.bone.updateMatrixWorld(true);
+  }
+
   pose() {
     for (const chain of this.chains) for (const joint of chain.joints) this.aim(joint, joint.current);
   }
@@ -523,7 +576,8 @@ export class PhysicsPreview {
   reset() {
     for (const chain of this.chains) {
       for (const joint of chain.joints) {
-        joint.bone.quaternion.copy(joint.initLocal);
+        joint.bone.quaternion.copy(restQ(joint));
+        if (joint.bounce) joint.bone.position.copy(restP(joint));
         joint.bone.updateMatrixWorld(true);
       }
     }
@@ -535,6 +589,10 @@ export class PhysicsPreview {
         joint.current.copy(origin).addScaledVector(restDir, joint.length);
         joint.prev.copy(joint.current);
         joint.velocity.set(0, 0, 0);
+        if (joint.bounce) {
+          joint.bounce.position.copy(origin);
+          joint.bounce.velocity.set(0, 0, 0);
+        }
       }
     }
     this.accumulator = 0;
@@ -543,7 +601,12 @@ export class PhysicsPreview {
   dispose() {
     // Put the swinging bones back where they started: the next apply() would otherwise take the
     // drooped pose as the rest pose (and the chain would stay down for good).
-    for (const chain of this.chains) for (const joint of chain.joints) joint.bone.quaternion.copy(joint.initLocal);
+    for (const chain of this.chains) {
+      for (const joint of chain.joints) {
+        joint.bone.quaternion.copy(restQ(joint));
+        if (joint.bounce) joint.bone.position.copy(restP(joint));
+      }
+    }
     this.chains = [];
     this.colliders = [];
     this.refreshHelpers();
@@ -561,7 +624,7 @@ export function toManifest(physics) {
     version: 1,
     groups: physics.groups.map((g) => ({
       name: String(g.name).slice(0, 80), kind: KINDS.includes(g.kind) ? g.kind : 'custom', enabled: !!g.enabled,
-      mode: modeOf(g), maxAngle: round(maxAngleOf(g)),
+      mode: modeOf(g), maxAngle: round(maxAngleOf(g)), translation: round(translationOf(g)),
       stiffness: round(g.stiffness), drag: round(g.drag), gravity: round(g.gravity),
       gravityDir: (g.gravityDir ?? [0, -1, 0]).map(round), radius: round(g.radius),
       chains: g.chains, colliders: g.colliders ?? [],
