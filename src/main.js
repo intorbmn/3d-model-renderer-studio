@@ -186,6 +186,13 @@ async function loadModel(fileSet, entry, info, prefix = 'model/', { keepCamera =
     showModelStatus(model);
     setMode(state.character);
     state.outfits = readOutfits(info?.outfits);
+    // The card keeps only the pieces no preset wears in `shape.hidden`: wear the default preset, as the mod does.
+    const wear = state.outfits.presets[state.outfits.default];
+    if (wear) {
+      for (const m of wear.hidden) state.hiddenParts.add(m);
+      applyHidden(model, state.hiddenParts);
+      state.physicsPreview?.reset?.();
+    }
     if (state.character) {
       buildShapeMaker();
       buildOutfitTab();

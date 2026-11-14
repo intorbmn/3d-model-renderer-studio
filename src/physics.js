@@ -305,6 +305,8 @@ const restQ = (joint) => joint.bone.userData.shapePose?.q ?? joint.initLocal;
 const restP = (joint) => joint.bone.userData.shapePose?.p ?? joint.bounce.restLocal;
 const MAX_STEPS = 4;
 const RESET_DISTANCE = 4;
+/** How many times a tail is checked against all its colliders, the order reversed each time. */
+const COLLISION_PASSES = 4;
 
 /** Angular frequency (rad/s) and damping ratio of a jiggle joint (same as the mod). */
 function jiggleConstants(stiffness, drag) {
@@ -525,19 +527,29 @@ export class PhysicsPreview {
           if (axis.lengthSq() < 1e-12) next.copy(restTail);
           else next.copy(restDir).applyAxisAngle(axis, chain.maxAngle).multiplyScalar(joint.length).add(origin);
         }
-        chain.colliders.forEach((collider, i) => {
-          const limit = joint.limits[i];
-          if (!(limit > 0)) return;
-          this.closest(collider, next, closest);
-          if (next.distanceToSquared(closest) >= limit * limit) return;
-          // Out on the side the tail came from, so it is never pulled through.
-          this.closest(collider, joint.current, closestNow);
-          const normal = _v.copy(joint.current).sub(closestNow);
-          if (normal.lengthSq() < 1e-12) normal.copy(next).sub(closest);
-          if (normal.lengthSq() < 1e-12) normal.set(0, 1, 0);
-          next.copy(closest).addScaledVector(normal.normalize(), limit);
-          keep(origin, joint.length);
-        });
+        // A tail between two colliders (a skirt between the legs) gets pushed from one into the other:
+        // go over them a few times, the other way round each time, so no leg wins just by coming last.
+        const count = chain.colliders.length;
+        for (let pass = 0; pass < COLLISION_PASSES; pass++) {
+          let pushed = false;
+          for (let n = 0; n < count; n++) {
+            const i = pass % 2 === 0 ? n : count - 1 - n;
+            const collider = chain.colliders[i];
+            const limit = joint.limits[i];
+            if (!(limit > 0)) continue;
+            this.closest(collider, next, closest);
+            if (next.distanceToSquared(closest) >= limit * limit) continue;
+            // Out on the side the tail came from, so it is never pulled through.
+            this.closest(collider, joint.current, closestNow);
+            const normal = _v.copy(joint.current).sub(closestNow);
+            if (normal.lengthSq() < 1e-12) normal.copy(next).sub(closest);
+            if (normal.lengthSq() < 1e-12) normal.set(0, 1, 0);
+            next.copy(closest).addScaledVector(normal.normalize(), limit);
+            keep(origin, joint.length);
+            pushed = true;
+          }
+          if (!pushed) break;
+        }
         if (chain.jiggle) joint.velocity.copy(next).sub(joint.current).divideScalar(h);
         joint.prev.copy(joint.current);
         joint.current.copy(next);
