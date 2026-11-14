@@ -121,7 +121,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .preset-row > span { color: var(--muted); font-size: 12px; margin-right: 4px; }
 .chip { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 4px 12px; font: inherit; cursor: pointer; }
 .chip.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
-.maker-row { display: grid; grid-template-columns: 1fr 120px 2.5em; gap: 8px; align-items: center; margin-bottom: 8px; font-size: 13px; }
+.maker-row { display: grid; grid-template-columns: 1fr 104px 4.2em; gap: 8px; align-items: center; margin-bottom: 8px; font-size: 13px; }
 .maker-row output { font-size: 12px; }
 .maker-row select, .maker-row input[type=color] { grid-column: 2 / 4; width: 100%; }
 .maker-row input[type=color] { height: 28px; border: 1px solid var(--line); border-radius: 6px; padding: 0; background: none; }
@@ -146,3 +146,11 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .chip.small { font-size: 11px; padding: 2px 8px; }
 .colliders { margin: 8px 0; }
 .colliders .row { grid-template-columns: 1fr 110px auto; }
+
+.num { width: 100%; font: inherit; font-size: 12px; padding: 2px 4px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--ink); font-variant-numeric: tabular-nums; }
+.colliders .row { grid-template-columns: 1fr 80px 4.6em auto; }
+
+.defaults-bar { display: flex; gap: 6px; flex-wrap: wrap; margin: -6px 0 12px; }
+.import-row { display: flex; gap: 6px; align-items: center; margin: 4px 0 10px; }
+.import-row select { flex: 1; }
+.row.imported { grid-template-columns: 1fr 0 auto; margin-bottom: 4px; }

@@ -116,6 +116,7 @@ export async function writeCard(png, info, files) {
   if (info.physics) manifest.physics = info.physics;
   if (info.template) manifest.template = info.template;
   if (info.shape) manifest.shape = info.shape;
+  if (info.editor) manifest.editor = info.editor;
   const manifestBytes = new TextEncoder().encode(JSON.stringify(manifest));
 
   const header = new Uint8Array(16);

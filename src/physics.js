@@ -79,7 +79,20 @@ export function detectGroups(model, tuning = {}) {
   const chainsByKind = Object.fromEntries(KINDS.map((k) => [k, []]));
   const used = new Set();
   const childrenOf = (bone) => bone.children.filter((c) => c.isBone);
+  // A bone with both a left and a right side under it (a bust or hip centre) is not a chain: it
+  // would swing both sides as one.
+  const sideOf = (name) => (/(_L|\.L|^Left|_l$)(\b|_|$)/.test(name) ? 'L' : /(_R|\.R|^Right|_r$)(\b|_|$)/.test(name) ? 'R' : null);
+  const bilateral = (bone) => {
+    const sides = new Set();
+    bone.traverse((o) => { if (o !== bone && o.isBone) { const s = sideOf(nameOf.get(o) ?? o.name); if (s) sides.add(s); } });
+    return sides.size === 2 && !sideOf(nameOf.get(bone) ?? bone.name);
+  };
   const walk = (root, kind) => {
+    if (bilateral(root)) {
+      for (const child of childrenOf(root)) if (kindByBone.get(child) === kind) queue.push([child, kind]);
+      used.add(root);
+      return;
+    }
     const chain = [root];
     used.add(root);
     let current = root;
@@ -349,6 +362,9 @@ export class PhysicsPreview {
   }
 
   dispose() {
+    // Put the swinging bones back where they started: the next setInitState() would otherwise take
+    // the drooped pose as the rest pose (and the chain would stay down for good).
+    this.manager?.reset();
     this.colliders = [];
     this.refreshHelpers();
     for (const o of this.objects) o.removeFromParent();

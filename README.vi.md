@@ -20,7 +20,7 @@ Mọi thứ chạy trong trình duyệt của bạn, không tải gì lên mạn
    - **Va chạm**: các vùng va chạm ở đầu, cổ, thân, ngực, hông, tay, chân giữ tóc và quần áo không xuyên qua người. Chỉnh cỡ, thêm vùng ở bất kỳ xương nào, bật *Show colliders* để xem.
    - *Preview* chạy vật lý trực tiếp khi model đang cử động.
    - Model PMX/PMD giữ vật lý rigid body có sẵn trong file; mod chạy vật lý đó.
-5. Tab **Character**, cho model có xương hình dáng kiểu ILLGAMES (ví dụ nhân vật xuất bằng KKBP, xem bên dưới): thanh trượt cho cơ thể (đầu, cổ, vai, ngực, eo, hông, vòng một, tay, chân) và mặt (khuôn mặt, mắt, lông mày, mũi, miệng, tai), cùng danh sách **Parts** để ẩn/hiện từng phần (tóc, áo, quần, giày…). Nhấp đúp vào thanh trượt để đặt lại. Card lưu thông số và mod áp dụng khi nạp model, nên mọi card làm theo cách này đều chạy giống nhau.
+5. Tab **Character**, cho model có xương hình dáng kiểu ILLGAMES (ví dụ nhân vật xuất bằng KKBP, xem bên dưới): thanh trượt cho cơ thể (đầu, cổ, vai, ngực, eo, hông, vòng một, tay, chân) và mặt (khuôn mặt, mắt, lông mày, mũi, miệng, tai), cùng danh sách **Parts** để ẩn/hiện từng phần (tóc, áo, quần, giày…) và **tự import** quần áo, tóc, giày, phụ kiện (GLB/glTF gắn cùng khung xương, ví dụ một bản KKBP khác xuất với `--only-outfit`). Mỗi thanh trượt có ô nhập số để nhập giá trị chính xác (giá trị nhập tay có thể vượt hai đầu thanh trượt); nhấp đúp để đặt lại. **Lưu mặc định** giữ các giá trị hiện tại (trong trình duyệt và trong card), **Về mặc định đã lưu** và **Về gốc** để hoàn tác khi thử nghiệm, **Dùng làm model gốc** biến cơ thể hiện tại thành điểm bắt đầu cho **Tạo nhân vật**. Card lưu thông số và mod áp dụng khi nạp model, nên mọi card làm theo cách này đều chạy giống nhau.
 6. Tab **Colours**: màu theo từng material (mod áp dụng đúng màu này) và xem trước biểu cảm.
 7. **Export card**. Muốn sửa thì mở lại bằng *Open card*.
 
@@ -36,7 +36,7 @@ Mọi thứ chạy trong trình duyệt của bạn, không tải gì lên mạn
 blender --background character.blend --python tools/blender/export_kkbp_glb.py -- character.glb
 ```
 
-Script giữ lại các xương hình dáng mà tab Character dùng, tóc/quần áo thành từng phần, biểu cảm và xương tóc/váy/ngực cho vật lý, đồng thời đặt tên khung xương để mod nhận diện. Thêm `--no-outfit` để bỏ trang phục. File xuất ra chứa tài sản của game: chỉ dùng cho bản thân, không chia sẻ trừ khi điều khoản của game cho phép.
+Script giữ lại các xương hình dáng mà tab Character dùng, tóc/quần áo thành từng phần, biểu cảm và xương tóc/váy/ngực cho vật lý, đồng thời đặt tên khung xương để mod nhận diện. Thêm `--no-outfit` để bỏ trang phục (cơ thể gốc), hoặc `--only-outfit` để chỉ xuất trang phục và tóc thành một phần để import. File xuất ra chứa tài sản của game: chỉ dùng cho bản thân, không chia sẻ trừ khi điều khoản của game cho phép.
 
 ## Định dạng card
 

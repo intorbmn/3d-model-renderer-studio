@@ -114,6 +114,7 @@ export class ShapeMaker {
     this.rest = new Map();
     this.values = {};
     this.influence = influentialBones(model);
+    this.mainBones = new Set([...(model.rawHumanoid ?? model.humanoid ?? new Map()).values()]);
     // Resolve each entry to the bone that is actually used on this model.
     this.sliders = SHAPE_SLIDERS.map(([id, group, bones, op, range]) => [id, group,
       bones.map(([entry, mirrored]) => [...this.resolve(entry), mirrored]).filter(([name]) => name), op, range])
@@ -121,10 +122,28 @@ export class ShapeMaker {
     for (const [, , bones] of this.sliders) {
       for (const [name, counter] of bones) {
         const bone = boneByName.get(name);
-        const related = counter ? [bone, ...bone.children.filter((c) => c.isBone)] : [bone];
+        const related = counter ? [bone, ...this.counterTargets(bone)] : [bone];
         for (const b of related) this.remember(b);
       }
     }
+  }
+
+  /**
+   * The bones that get the opposite scale when `bone` is thickened: the next main (humanoid)
+   * bones under it, found through its twist segments ("Left arm.001", ...). Twist segments and
+   * helper bones keep the scale, so the whole limb section thickens evenly.
+   */
+  counterTargets(bone) {
+    const out = [];
+    const base = this.nameOf(bone).replace(/\.\d{3}$/, '');
+    const walk = (node) => {
+      for (const child of node.children.filter((c) => c.isBone)) {
+        if (this.mainBones.has(child)) out.push(child);
+        else if (this.nameOf(child).startsWith(`${base}.`) && /^\.\d{3}$/.test(this.nameOf(child).slice(base.length))) walk(child);
+      }
+    };
+    walk(bone);
+    return out;
   }
 
   /** "cf_s_x|!Main bone" → [name, counter-scale?] for the first alternative that moves vertices. */
@@ -176,7 +195,7 @@ export class ShapeMaker {
     this.values = {};
     for (const [id] of this.sliders) {
       const v = Number(values?.[id]);
-      if (Number.isFinite(v) && v !== 0.5) this.values[id] = Math.min(1, Math.max(0, v));
+      if (Number.isFinite(v) && v !== 0.5) this.values[id] = Math.min(2, Math.max(-1, v));
     }
     this.apply();
   }
@@ -242,7 +261,7 @@ export class ShapeMaker {
         if (counter && !edit.s.equals(before)) {
           // Undo this slider's scale on the children, along their own closest axes.
           const change = edit.s.clone().divide(before);
-          for (const child of bone.children.filter((c) => c.isBone)) {
+          for (const child of this.counterTargets(bone)) {
             const childRest = this.rest.get(child);
             if (!childRest) continue;
             const childEdit = get(this.nameOf(child));

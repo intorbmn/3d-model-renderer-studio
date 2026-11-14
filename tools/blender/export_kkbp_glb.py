@@ -13,7 +13,10 @@ only the deform bones of that rig and drops the DEF- prefix, so the GLB has one 
 KKBP's bone names (Hips, Spine, Left arm, ...) that the mod recognises, in the rig's true rest pose.
 
 Usage (Blender 4.x or 5.x):
-    blender --background character.blend --python export_kkbp_glb.py -- output.glb [--no-outfit]
+    blender --background character.blend --python export_kkbp_glb.py -- output.glb [--no-outfit | --only-outfit]
+
+--no-outfit leaves the clothes and hair out (a base body); --only-outfit writes just them, as a part
+to put on a character in the studio's Parts list.
 
 Only use this on characters you are allowed to use; the result contains the game's assets.
 """
@@ -30,8 +33,8 @@ ALPHA_MATERIALS = re.compile(r"eyelash|mayuge|hitomi|eyelid|namida|eyeline|hair|
 def args():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     if not argv:
-        sys.exit("usage: blender --background file.blend --python export_kkbp_glb.py -- output.glb [--no-outfit]")
-    return argv[0], "--no-outfit" in argv
+        sys.exit("usage: blender --background file.blend --python export_kkbp_glb.py -- output.glb [--no-outfit | --only-outfit]")
+    return argv[0], "--no-outfit" in argv, "--only-outfit" in argv
 
 
 def find_armatures():
@@ -233,7 +236,7 @@ def strip_rigify(rig, meta):
 
 
 def main():
-    output, no_outfit = args()
+    output, no_outfit, only_outfit = args()
     rigify, meta = find_armatures()
     # Rigify keeps the true rest pose of every deform bone (KKBP adjusts hair and accessory bones
     # after building the metarig), so the export uses the generated rig, stripped to its deform bones.
@@ -253,6 +256,8 @@ def main():
         if not any(m.type == "ARMATURE" and m.object is arm for m in obj.modifiers):
             continue
         if no_outfit and obj.name.startswith("Outfit"):
+            continue
+        if only_outfit and not obj.name.startswith("Outfit"):
             continue
         for modifier in list(obj.modifiers):
             if modifier.type in {"SOLIDIFY", "UV_WARP", "SUBSURF"}:

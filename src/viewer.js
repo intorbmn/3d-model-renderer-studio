@@ -81,17 +81,7 @@ export class Viewer {
   /** Loads the model `entry` ({path, type}) of a FileSet. */
   async load(fileSet, entry, { keepCamera = false } = {}) {
     this.clear();
-    const manager = new THREE.LoadingManager();
-    const baseDir = entry.path.includes('/') ? entry.path.slice(0, entry.path.lastIndexOf('/')) : '';
-    const missing = new Set();
-    manager.setURLModifier((url) => {
-      if (url.startsWith('data:')) return url;
-      if (url.startsWith('blob:')) return url;
-      const found = fileSet.resolve(url, baseDir);
-      if (found) return fileSet.url(found);
-      missing.add(decodeURIComponent(url.split('/').pop()));
-      return url;
-    });
+    const { manager, missing } = this.loadingManager(fileSet, entry);
     const url = fileSet.url(entry.path);
 
     let model;
@@ -104,6 +94,35 @@ export class Viewer {
     if (!keepCamera) this.frameModel();
     this.captureMaterialColors();
     return model;
+  }
+
+  /** Resolves the files a model refers to (textures, .bin) inside its FileSet. */
+  loadingManager(fileSet, entry) {
+    const manager = new THREE.LoadingManager();
+    const baseDir = entry.path.includes('/') ? entry.path.slice(0, entry.path.lastIndexOf('/')) : '';
+    const missing = new Set();
+    manager.setURLModifier((url) => {
+      if (url.startsWith('data:')) return url;
+      if (url.startsWith('blob:')) return url;
+      const found = fileSet.resolve(url, baseDir);
+      if (found) return fileSet.url(found);
+      missing.add(decodeURIComponent(url.split('/').pop()));
+      return url;
+    });
+    return { manager, missing };
+  }
+
+  /** Loads a glTF/GLB of a FileSet without adding it to the scene (for imported parts). */
+  async loadGltfScene(fileSet, entry) {
+    const { manager } = this.loadingManager(fileSet, entry);
+    const gltf = await new GLTFLoader(manager).loadAsync(fileSet.url(entry.path));
+    // Keep the file's own node names (GLTFLoader strips '.' and turns spaces into '_').
+    gltf.scene.traverse((o) => {
+      const index = gltf.parser.associations.get(o)?.nodes;
+      const name = gltf.parser.json.nodes?.[index]?.name;
+      if (name) o.userData.originalName = name;
+    });
+    return gltf;
   }
 
   async loadMmd(manager, url, type) {
@@ -123,6 +142,7 @@ export class Viewer {
     const root = new THREE.Group();
     // GLTFLoader strips characters such as '.' from node names; the mod sees the original names.
     const originalName = (object) => {
+      if (object.userData.originalName) return object.userData.originalName;
       const index = gltf.parser.associations.get(object)?.nodes;
       return gltf.parser.json.nodes?.[index]?.name ?? object.name;
     };
@@ -148,13 +168,18 @@ export class Viewer {
       for (const [name, index] of mapping) humanoid.set(name, bones[index]);
       complete = isComplete(mapping);
     }
+    // The file's own pose, before the arm correction below: written back on export.
+    const bindPose = new Map();
+    root.traverse((o) => {
+      if (o.isBone) bindPose.set(o, { p: o.position.clone(), q: o.quaternion.clone(), s: o.scale.clone() });
+    });
     root.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(root);
     const height = Math.max(1e-4, box.max.y - box.min.y);
     // The mod treats one VRM metre as 12.5 MMD units, and scales a plain glTF to 20 units tall.
     const unit = vrm ? MMD_UNIT : height / GLTF_HEIGHT_UNITS;
     const model = { kind: vrm ? 'vrm' : 'gltf', type, root, vrm, gltf, unit, humanoid, humanoidComplete: complete, originalName,
-      rawHumanoid: vrm ? rawHumanoid : humanoid };
+      rawHumanoid: vrm ? rawHumanoid : humanoid, bindPose };
     if (complete) {
       model.retarget = new HumanoidRetarget(root, humanoid, unit);
       model.retarget.applyRestCorrection();

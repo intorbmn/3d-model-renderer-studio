@@ -10,6 +10,8 @@ import { detectGroups, fromVrm, PhysicsPreview, toManifest, chainFrom, makeGroup
 import { detectIllgamesCard, readIllgamesCharacter } from './illgames.js';
 import { FORMATS, exportModel } from './export.js';
 import { ShapeMaker, listParts, applyHidden } from './maker/shape.js';
+import { SLOTS, attachPart, detachPart, replacedMaterials, exportCombined } from './maker/parts.js';
+import * as store from './store.js';
 
 export const STUDIO_VERSION = '0.3.0';
 
@@ -41,6 +43,9 @@ const state = {
   physicsOn: true,
   shapeMaker: null, // character maker on shape bones (KKBP / ILLGAMES-style models)
   hiddenParts: new Set(), // material names hidden by the maker
+  parts: [], // imported clothing, hair, shoes, accessories on the character
+  savedDefaults: null, // values the user saved to come back to
+  original: null, // the model's own values
 };
 window.studio = { viewer, state };
 
@@ -68,6 +73,35 @@ const el = (tag, props = {}, children = []) => {
   node.append(...children);
   return node;
 };
+
+/**
+ * A slider with a number box next to it. The box can go past the slider's ends (within
+ * `typedMin`..`typedMax`), like typing values in the games' character makers.
+ */
+function valueControl({ min, max, step, value, typedMin = min, typedMax = max, digits = 2, reset = null, onChange }) {
+  const range = el('input', { type: 'range', min, max, step, value });
+  const number = el('input', { type: 'number', min: typedMin, max: typedMax, step, value: Number(value).toFixed(digits), className: 'num' });
+  range.addEventListener('input', () => {
+    number.value = Number(range.value).toFixed(digits);
+    onChange(Number(range.value));
+  });
+  number.addEventListener('change', () => {
+    let v = Number(number.value);
+    if (!Number.isFinite(v)) v = Number(range.value);
+    v = Math.min(typedMax, Math.max(typedMin, v));
+    number.value = v.toFixed(digits);
+    range.value = v;
+    onChange(v);
+  });
+  if (reset !== null) {
+    range.addEventListener('dblclick', () => {
+      range.value = reset;
+      number.value = Number(reset).toFixed(digits);
+      onChange(reset);
+    });
+  }
+  return [range, number];
+}
 
 // ---------- tabs
 
@@ -152,11 +186,14 @@ async function loadModel(fileSet, entry, info, prefix = 'model/', { keepCamera =
     viewer.applyTints(state.settings.materialTints);
     buildMaterialList();
     buildExpressionList();
+    state.parts = [];
     setupPhysics(model, physics);
     setupShapeMaker(model, shape);
+    await setupDefaults(model, info?.editor?.defaults);
     await selectMotion($('motion').value);
     showModelStatus(model);
     for (const id of ['export-card', 'retake', 'export-model', 'export-format']) $(id).disabled = false;
+    $('defaults-bar').hidden = false;
     $('tab-maker').hidden = !state.template && !state.shapeMaker;
     $('template-maker').hidden = !state.template;
     $('shape-maker').hidden = !state.shapeMaker;
@@ -200,6 +237,22 @@ function buildShapeMaker() {
   }
   if (shapeSub === 'parts') {
     box.append(el('p', { className: 'hint', textContent: t('partsHint') }));
+    // Import a piece of clothing, hair, shoes or an accessory.
+    const slot = el('select', { id: 'part-slot' });
+    for (const s of SLOTS) slot.append(new Option(t(`slot_${s}`), s));
+    const file = el('input', { type: 'file', multiple: true, hidden: true, accept: '.glb,.gltf,.bin,.png,.jpg,.jpeg' });
+    file.addEventListener('change', () => {
+      if (file.files.length) importPart(file.files, slot.value);
+      file.value = '';
+    });
+    const pick = el('label', { className: 'button small' }, [file, el('span', { textContent: t('partsImport') })]);
+    box.append(el('div', { className: 'import-row' }, [slot, pick]));
+    for (const part of state.parts) {
+      const remove = el('button', { type: 'button', textContent: t('remove') });
+      remove.addEventListener('click', () => removePart(part));
+      box.append(el('div', { className: 'row imported' }, [
+        el('span', { className: 'label', textContent: `${t(`slot_${part.slot}`)}: ${part.name}` }), el('span'), remove]));
+    }
     let mesh = null;
     for (const part of listParts(viewer.model)) {
       if (part.mesh !== mesh) {
@@ -218,18 +271,11 @@ function buildShapeMaker() {
   }
   for (const [id, group] of maker.sliders) {
     if (group !== shapeSub) continue;
-    const input = el('input', { type: 'range', min: 0, max: 100, step: 1, value: Math.round(maker.value(id) * 100) });
-    const out = el('output', { textContent: input.value });
-    input.addEventListener('input', () => {
-      out.textContent = input.value;
-      maker.setValue(id, Number(input.value) / 100);
+    const controls = valueControl({
+      min: 0, max: 100, step: 1, value: Math.round(maker.value(id) * 100), typedMin: -100, typedMax: 200, digits: 0, reset: 50,
+      onChange: (v) => maker.setValue(id, v / 100),
     });
-    input.addEventListener('dblclick', () => {
-      input.value = 50;
-      out.textContent = '50';
-      maker.setValue(id, 0.5);
-    });
-    box.append(el('label', { className: 'maker-row' }, [el('span', { textContent: t(`sh_${id}`) }), input, out]));
+    box.append(el('div', { className: 'maker-row' }, [el('span', { textContent: t(`sh_${id}`) }), ...controls]));
   }
 }
 
@@ -246,6 +292,115 @@ $('shape-reset').addEventListener('click', () => {
   applyHidden(viewer.model, state.hiddenParts);
   buildShapeMaker();
 });
+
+// ---------- saved defaults
+
+/** Everything the user edits: maker sliders, hidden parts, physics, size and tints. */
+function snapshot() {
+  return structuredClone({
+    sliders: state.shapeMaker ? { ...state.shapeMaker.values } : {},
+    hidden: [...state.hiddenParts],
+    physics: state.physics,
+    settings: state.settings,
+  });
+}
+
+function applySnapshot(snap) {
+  if (!snap || !viewer.model) return;
+  state.shapeMaker?.setValues(snap.sliders ?? {});
+  state.hiddenParts = new Set(snap.hidden ?? []);
+  applyHidden(viewer.model, state.hiddenParts);
+  if (snap.physics !== undefined && viewer.model.kind !== 'mmd') state.physics = structuredClone(snap.physics);
+  if (snap.settings) {
+    state.settings = structuredClone(snap.settings);
+    viewer.setScale(state.settings.scale ?? 1);
+    viewer.applyTints(state.settings.materialTints ?? {});
+    $('f-scale').value = state.settings.scale ?? 1;
+    $('o-scale').textContent = Number(state.settings.scale ?? 1).toFixed(2);
+    buildMaterialList();
+  }
+  applyPhysics();
+  renderPhysics();
+  if (state.shapeMaker) buildShapeMaker();
+}
+
+const defaultsKey = () => `defaults:${state.entry?.path}:${viewer.model?.root ? viewer.modelHeight().toFixed(4) : ''}`;
+
+async function setupDefaults(model, fromCard) {
+  state.original = snapshot();
+  state.original.sliders = {};
+  state.original.hidden = [];
+  state.original.settings = { scale: 1, materialTints: {} };
+  state.savedDefaults = fromCard ?? (await store.get(defaultsKey())) ?? null;
+  $('defaults-restore').disabled = !state.savedDefaults;
+}
+
+$('defaults-save').addEventListener('click', async () => {
+  if (!viewer.model) return;
+  state.savedDefaults = snapshot();
+  await store.set(defaultsKey(), state.savedDefaults);
+  $('defaults-restore').disabled = false;
+  setStatus([[t('defaultsSaved'), 'ok']]);
+});
+$('defaults-restore').addEventListener('click', () => applySnapshot(state.savedDefaults));
+$('defaults-original').addEventListener('click', () => applySnapshot(state.original));
+
+$('base-save').addEventListener('click', async () => {
+  if (!viewer.model || !state.fileSet) return;
+  const files = [];
+  for (const path of state.fileSet.paths) files.push([path, await state.fileSet.bytes(path)]);
+  const ok = await store.set('base', { files, entry: state.entry, defaults: snapshot() });
+  await refreshBaseButton();
+  setStatus([[ok ? t('baseSaved') : t('baseNotSaved'), ok ? 'ok' : 'warn']]);
+});
+
+// ---------- imported parts (clothing, hair, shoes, accessories)
+
+async function importPart(files, slot) {
+  const model = viewer.model;
+  if (!model || model.kind !== 'gltf') return message(t('partsGltfOnly'));
+  const fileSet = FileSet.fromFiles([...files]);
+  const entry = fileSet.findModel();
+  if (!entry || !['glb', 'gltf'].includes(entry.type)) return message(t('partsNeedGltf'));
+  try {
+    const gltf = await viewer.loadGltfScene(fileSet, entry);
+    const name = entry.path.split('/').pop().replace(/\.[^.]+$/, '');
+    const part = attachPart(model, gltf, slot, name);
+    part.fileSet = fileSet;
+    // Put on in place of the character's own piece of the same kind.
+    part.hid = replacedMaterials(model, slot, new Set(part.materials)).filter((m) => !state.hiddenParts.has(m));
+    for (const m of part.hid) state.hiddenParts.add(m);
+    state.parts.push(part);
+    afterPartsChanged();
+  } catch (error) {
+    console.error(error);
+    message(`${t('partsFailed')} ${error.message ?? error}`);
+  }
+}
+
+function removePart(part) {
+  detachPart(viewer.model, part);
+  part.fileSet?.dispose?.();
+  for (const m of part.hid ?? []) state.hiddenParts.delete(m);
+  state.parts = state.parts.filter((p) => p !== part);
+  afterPartsChanged();
+}
+
+function afterPartsChanged() {
+  const previous = state.physics;
+  applyHidden(viewer.model, state.hiddenParts);
+  viewer.captureMaterialColors();
+  viewer.applyTints(state.settings.materialTints);
+  buildMaterialList();
+  // New bones (a ponytail, a skirt) get physics; the user's own edits are kept.
+  const tuning = state.template ? templatePhysicsTuning(state.template) : {};
+  state.physics = detectGroups(viewer.model, tuning);
+  if (previous) mergePhysics(previous);
+  else applyPhysics();
+  fillRootBones(viewer.model);
+  if (state.shapeMaker) buildShapeMaker();
+  renderFacts(viewer.model);
+}
 
 /** The card's `shape` section, or null when nothing is changed. */
 function shapeManifest() {
@@ -374,8 +529,23 @@ async function buildTemplate({ first, info = null }) {
   if (!first) state.preview = null;
 }
 
-$('new-character').hidden = !MAKER_ENABLED;
-$('new-character').addEventListener('click', () => $('new-dialog').showModal());
+// "New character" starts from the base model the user saved in this browser.
+async function refreshBaseButton() {
+  $('new-character').hidden = !(await store.get('base'));
+}
+$('new-character').addEventListener('click', async () => {
+  const base = await store.get('base');
+  if (!base) return;
+  state.template = null;
+  const fileSet = FileSet.fromBytes(new Map(base.files));
+  await loadModel(fileSet, base.entry, {
+    name: 'Character', author: '', license: '', source: '', notes: '',
+    settings: { scale: 1, materialTints: {} }, editor: { defaults: base.defaults },
+  });
+  if (state.savedDefaults) applySnapshot(state.savedDefaults);
+  showTab('maker');
+});
+refreshBaseButton();
 $('new-dialog').addEventListener('close', async () => {
   const preset = $('new-dialog').returnValue;
   if (!preset) return;
@@ -462,16 +632,11 @@ function renderPhysics() {
     card.append(el('header', {}, [enabled, name, el('span', { className: 'badge', textContent: t(`kind_${group.kind}`) }), remove]));
     card.append(el('div', { className: 'meta', textContent: `${group.chains.length} ${t('physicsChains')} · ${group.chains.slice(0, 3).map((c) => c[0]).join(', ')}${group.chains.length > 3 ? '…' : ''}` }));
     const slider = (key, max, step) => {
-      const row = el('label', { className: 'maker-row' });
-      const input = el('input', { type: 'range', min: 0, max, step, value: group[key] });
-      const out = el('output', { textContent: Number(group[key]).toFixed(2) });
-      input.addEventListener('input', () => {
-        group[key] = Number(input.value);
-        out.textContent = Number(input.value).toFixed(2);
-        applyPhysics(120);
+      const controls = valueControl({
+        min: 0, max, step, value: group[key], typedMin: 0, typedMax: max * 5, digits: key === 'radius' ? 4 : 2,
+        onChange: (v) => { group[key] = v; applyPhysics(120); },
       });
-      row.append(el('span', { textContent: t(`p_${key}`) }), input, out);
-      card.append(row);
+      card.append(el('div', { className: 'maker-row' }, [el('span', { textContent: t(`p_${key}`) }), ...controls]));
     };
     slider('stiffness', 4, 0.05);
     slider('drag', 1, 0.01);
@@ -499,10 +664,10 @@ function renderColliders() {
   if (!viewer.model || viewer.model.kind === 'mmd' || !state.physics) return;
   const height = viewer.modelHeight();
   state.physics.colliders.forEach((c, index) => {
-    const input = el('input', { type: 'range', min: 0, max: Number((height * 0.2).toFixed(3)), step: Number((height * 0.001).toFixed(5)), value: c.radius });
-    input.addEventListener('input', () => {
-      c.radius = Number(input.value);
-      applyPhysics(120);
+    const [input, number] = valueControl({
+      min: 0, max: Number((height * 0.2).toFixed(3)), step: Number((height * 0.001).toFixed(5)), value: c.radius,
+      typedMin: 0, typedMax: height, digits: 4,
+      onChange: (v) => { c.radius = v; applyPhysics(120); },
     });
     const remove = el('button', { type: 'button', textContent: t('remove') });
     remove.addEventListener('click', () => {
@@ -512,7 +677,7 @@ function renderColliders() {
       renderPhysics();
     });
     box.append(el('div', { className: 'row' }, [
-      el('span', { className: 'label', textContent: `${c.name}${c.tail ? ' ⬭' : ' ●'}`, title: c.bone }), input, remove]));
+      el('span', { className: 'label', textContent: `${c.name}${c.tail ? ' ⬭' : ' ●'}`, title: c.bone }), input, number, remove]));
   });
 }
 
@@ -716,6 +881,13 @@ async function exportCard() {
   if (state.template) manifestExtras.template = { version: TEMPLATE_VERSION, params: state.template };
   const shape = viewer.model.kind !== 'mmd' ? shapeManifest() : null;
   if (shape) manifestExtras.shape = shape;
+  if (state.savedDefaults) manifestExtras.editor = { version: 1, defaults: state.savedDefaults };
+  if (state.parts.length > 0) {
+    // Character and imported parts as one model, so the mod loads them like any other.
+    files.length = 0;
+    files.push({ path: 'model/character.glb', data: await exportCombined(viewer.model) });
+    info.model = { path: 'model/character.glb', type: 'glb' };
+  }
   const card = await writeCard(state.preview, { ...info, ...manifestExtras }, files);
   download(card, `${info.name || 'model'}.png`, 'image/png');
   return card;
@@ -740,7 +912,9 @@ async function exportCurrentModel() {
       download(bytes, state.entry.path.split('/').pop(), FORMATS.original[2]);
       return;
     }
-    const bytes = await exportModel(viewer.model, format);
+    const bytes = format === 'glb' && viewer.model.kind !== 'mmd'
+      ? await exportCombined(viewer.model) // rest pose, original names, imported parts included
+      : await exportModel(viewer.model, format);
     const [, extension, mime] = FORMATS[format];
     download(bytes, `${base}.${extension}`, mime);
   } catch (error) {

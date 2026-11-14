@@ -20,7 +20,7 @@ Everything runs in your browser. Nothing is uploaded.
    - **Collision**: colliders on the head, neck, spine, chest, hips, arms and legs keep hair and clothes out of the body. Resize them, add one on any bone, and turn on *Show colliders* to see them.
    - *Preview* runs the physics live while the motion plays.
    - PMX/PMD models keep the rigid-body physics in their file; the mod runs that.
-5. **Character** tab, for models with ILLGAMES-style shape bones (for example characters exported with KKBP, see below): sliders for the body (head, neck, shoulders, chest, waist, hips, bust, arms, legs) and the face (face shape, eyes, brows, nose, mouth, ears), and a **Parts** list to show or hide each piece (hair, top, bottoms, shoes, ...). Double-click a slider to reset it. The card keeps the values and the mod applies them when it loads the model, so every card made this way works the same.
+5. **Character** tab, for models with ILLGAMES-style shape bones (for example characters exported with KKBP, see below): sliders for the body (head, neck, shoulders, chest, waist, hips, bust, arms, legs) and the face (face shape, eyes, brows, nose, mouth, ears), and a **Parts** list to show or hide each piece (hair, top, bottoms, shoes, ...) and to **import your own** clothing, hair, shoes or accessories (a GLB/glTF rigged to the same skeleton, for example another KKBP export made with `--only-outfit`). Every slider has a number box for exact values (typed values may go past the slider's ends); double-click a slider to reset it. **Save defaults** keeps the current values (in this browser and in the card), **Back to saved defaults** and **Back to original** undo experiments, and **Use as base model** makes the current body the starting point of **New character**. The card keeps the values and the mod applies them when it loads the model, so every card made this way works the same.
 6. **Colours** tab: a tint per material (the mod applies the same tints) and an expression preview.
 7. **Export card**. Re-open a card later with *Open card* to change it.
 
@@ -36,7 +36,7 @@ Everything runs in your browser. Nothing is uploaded.
 blender --background character.blend --python tools/blender/export_kkbp_glb.py -- character.glb
 ```
 
-It keeps the shape bones the Character tab works with, the hair/clothing pieces as parts, the expressions and the hair/skirt/bust bones for physics, and gives the skeleton the names the mod recognises. Add `--no-outfit` to leave the outfit out. The result contains the game's assets: use it for yourself and do not share it unless the game's terms allow.
+It keeps the shape bones the Character tab works with, the hair/clothing pieces as parts, the expressions and the hair/skirt/bust bones for physics, and gives the skeleton the names the mod recognises. Add `--no-outfit` to leave the outfit out (a base body), or `--only-outfit` to export just the outfit and hair as a part to import. The result contains the game's assets: use it for yourself and do not share it unless the game's terms allow.
 
 ## Card format
 

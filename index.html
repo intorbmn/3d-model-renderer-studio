@@ -56,6 +56,11 @@
         <button role="tab" data-tab="physics" data-i18n="tabPhysics">Vật lý</button>
         <button role="tab" data-tab="look" data-i18n="tabLook">Màu</button>
       </nav>
+      <div class="defaults-bar" id="defaults-bar" hidden>
+        <button class="button small" id="defaults-save" data-i18n="defaultsSave" data-i18n-title="defaultsSaveHint">Lưu mặc định</button>
+        <button class="button small" id="defaults-restore" disabled data-i18n="defaultsRestore" data-i18n-title="defaultsRestoreHint">Về mặc định đã lưu</button>
+        <button class="button small" id="defaults-original" data-i18n="defaultsOriginal" data-i18n-title="defaultsOriginalHint">Về gốc</button>
+      </div>
 
       <section class="tab-panel" data-panel="maker" hidden>
         <div id="shape-maker" hidden>
@@ -66,7 +71,10 @@
             <button data-shape-sub="parts" data-i18n="makerParts">Bộ phận</button>
           </nav>
           <div id="shape-controls"></div>
-          <button class="button small" id="shape-reset" data-i18n="shapeReset">Đặt lại tất cả</button>
+          <div class="row-actions">
+            <button class="button small" id="shape-reset" data-i18n="shapeReset">Đặt lại tất cả</button>
+            <button class="button small" id="base-save" data-i18n="baseSave" data-i18n-title="baseSaveHint">Dùng làm model gốc</button>
+          </div>
         </div>
         <div id="template-maker">
         <div class="preset-row">

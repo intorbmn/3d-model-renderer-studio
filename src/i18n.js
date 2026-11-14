@@ -1,7 +1,17 @@
 const STRINGS = {
   vi: {
+    defaultsSave: 'Lưu mặc định', defaultsRestore: 'Về mặc định đã lưu', defaultsOriginal: 'Về gốc',
+    defaultsSaveHint: 'Lưu mọi giá trị đang chỉnh (thanh trượt, bộ phận, vật lý, kích thước, màu) để quay lại sau. Được ghi cả vào card.',
+    defaultsRestoreHint: 'Đưa mọi giá trị về lần lưu mặc định gần nhất.', defaultsOriginalHint: 'Đưa mọi giá trị về như model gốc.',
+    defaultsSaved: 'Đã lưu giá trị mặc định', baseSave: 'Dùng làm model gốc',
+    baseSaveHint: 'Lưu model này (trong trình duyệt của bạn) làm cơ thể gốc cho nút "Tạo nhân vật".',
+    baseSaved: 'Đã lưu model gốc. Nút "Tạo nhân vật" sẽ bắt đầu từ model này.', baseNotSaved: 'Không lưu được model gốc (trình duyệt chặn lưu trữ).',
+    partsImport: 'Nhập phần mới', partsFailed: 'Không nhập được phần này:', partsGltfOnly: 'Chỉ nhập được phần mới cho model GLB/glTF.',
+    partsNeedGltf: 'Hãy chọn file GLB hoặc glTF (kèm .bin và texture nếu có).',
+    slot_hair: 'Tóc', slot_top: 'Áo', slot_bottom: 'Quần/váy', slot_shoes: 'Giày', slot_socks: 'Tất', slot_accessory: 'Phụ kiện',
+
     shapeHint: 'Chỉnh bằng xương hình dáng như trình tạo nhân vật của game. Card lưu thông số; mod áp dụng khi nạp model.',
-    makerParts: 'Bộ phận', shapeReset: 'Đặt lại tất cả', partsHint: 'Ẩn hoặc hiện từng phần (tóc, quần áo…). Phần bị ẩn cũng ẩn trong game.',
+    makerParts: 'Bộ phận', shapeReset: 'Đặt lại tất cả', partsHint: 'Ẩn/hiện từng phần, hoặc nhập tóc, quần áo, giày, phụ kiện của bạn (file GLB/glTF làm cho cùng khung xương). Phần bị ẩn cũng ẩn trong game.',
     sh_headSize: 'Cỡ đầu', sh_neckThickness: 'Độ dày cổ', sh_shoulderWidth: 'Độ rộng vai', sh_chestWidth: 'Độ rộng ngực',
     sh_chestDepth: 'Độ dày ngực', sh_waistWidth: 'Độ rộng eo', sh_waistDepth: 'Độ dày eo', sh_hipWidth: 'Độ rộng hông',
     sh_bustSize: 'Cỡ ngực', sh_bustLift: 'Độ cao ngực', sh_buttSize: 'Cỡ mông', sh_shoulderThickness: 'Độ dày vai',
@@ -66,8 +76,18 @@ const STRINGS = {
     koikatsuCard: 'Đây là card Koikatsu. Card Koikatsu chỉ chứa thông số cho trình tạo nhân vật của game, không chứa model 3D, nên không chuyển trực tiếp được. Hãy xuất nhân vật ra PMX bằng KKBP exporter trong game, rồi mở file PMX đó ở đây.',
   },
   en: {
+    defaultsSave: 'Save defaults', defaultsRestore: 'Back to saved', defaultsOriginal: 'Back to original',
+    defaultsSaveHint: 'Save every value you edited (sliders, parts, physics, size, colours) to come back to. Also written into the card.',
+    defaultsRestoreHint: 'Put every value back to the last saved defaults.', defaultsOriginalHint: 'Put every value back to the model as it was.',
+    defaultsSaved: 'Defaults saved', baseSave: 'Use as base model',
+    baseSaveHint: 'Keep this model (in your browser) as the base body for "New character".',
+    baseSaved: 'Base model saved. "New character" now starts from it.', baseNotSaved: 'Could not save the base model (the browser blocks storage).',
+    partsImport: 'Import a part', partsFailed: 'Could not import this part:', partsGltfOnly: 'Parts can only be added to GLB/glTF models.',
+    partsNeedGltf: 'Pick a GLB or glTF file (with its .bin and textures, if any).',
+    slot_hair: 'Hair', slot_top: 'Top', slot_bottom: 'Bottom', slot_shoes: 'Shoes', slot_socks: 'Socks', slot_accessory: 'Accessory',
+
     shapeHint: 'Shape the character with its shape bones, like the games\' character makers. The card keeps the values; the mod applies them when it loads the model.',
-    makerParts: 'Parts', shapeReset: 'Reset all', partsHint: 'Show or hide each part (hair, clothes, ...). Hidden parts are hidden in game too.',
+    makerParts: 'Parts', shapeReset: 'Reset all', partsHint: 'Show or hide each part, or import your own hair, clothes, shoes and accessories (GLB/glTF made for the same skeleton). Hidden parts are hidden in game too.',
     sh_headSize: 'Head size', sh_neckThickness: 'Neck thickness', sh_shoulderWidth: 'Shoulder width', sh_chestWidth: 'Chest width',
     sh_chestDepth: 'Chest depth', sh_waistWidth: 'Waist width', sh_waistDepth: 'Waist depth', sh_hipWidth: 'Hip width',
     sh_bustSize: 'Bust size', sh_bustLift: 'Bust height', sh_buttSize: 'Butt size', sh_shoulderThickness: 'Shoulder thickness',

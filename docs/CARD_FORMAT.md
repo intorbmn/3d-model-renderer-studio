@@ -125,7 +125,7 @@ it (VRM, GLB and glTF models).
 
 | Field | Meaning |
 |---|---|
-| `sliders` | The maker's slider values (0..1, 0.5 = as modelled). Only the studio reads them, to edit again. |
+| `sliders` | The maker's slider values (0.5 = as modelled; the slider covers 0..1, typed values may go from -1 to 2). Only the studio reads them, to edit again. |
 | `bones` | Per bone (glTF node name): `t` added to its position (parent's axes, file units), `r` a turn in degrees (X, Y, Z, after its own rotation), `s` multiplied into its scale. |
 | `hidden.materials`, `hidden.meshes` | Parts that are not drawn. |
 
@@ -136,6 +136,20 @@ A card can carry its own motions without any extra manifest field: a VMD named a
 model file is played by the mod in place of its default for that slot, because the mod looks in the
 model folder before `3d-skin/CustomAnim` and `3d-skin/DefaultAnim`. The studio's animation editor
 (in progress, `src/animation/`) will write them there.
+
+## Saved defaults (`editor`, optional)
+
+`"editor": { "defaults": { "sliders": {...}, "hidden": [...], "physics": {...}, "settings": {...} } }` holds the
+values the author saved with **Save defaults**, so whoever opens the card in the studio can go back to
+them with **Back to saved defaults** after experimenting. The mod ignores it: what it applies is
+`settings`, `physics` and `shape`.
+
+## Imported parts
+
+Clothing, hair, shoes and accessories imported in the studio are not a separate manifest field: when
+a card is exported with parts on, the character and its parts are written as one GLB
+(`model/character.glb`), with the parts' own bones added to the skeleton. The mod loads it like any
+other model, and the physics groups of the parts are in `physics`.
 
 ## Character maker (`template`, optional)
 
