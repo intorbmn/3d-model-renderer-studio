@@ -23,7 +23,6 @@
       <span class="brand-name">3D Model Renderer <b>Studio</b></span>
     </div>
     <div class="actions">
-      <button class="button accent" id="new-character" hidden data-i18n="newCharacter">Tạo nhân vật</button>
       <label class="button" title="" data-i18n-title="openFolderHint">
         <input type="file" id="pick-folder" webkitdirectory multiple hidden>
         <span data-i18n="openFolder">Mở thư mục model</span>
@@ -50,9 +49,9 @@
 
   <main class="layout">
     <aside class="panel" id="side">
-      <nav class="tabs" role="tablist">
+      <nav class="tabs" role="tablist" id="tabs">
         <button role="tab" data-tab="info" class="active" data-i18n="tabInfo">Card</button>
-        <button role="tab" data-tab="maker" id="tab-maker" hidden data-i18n="tabMaker">Nhân vật</button>
+        <button role="tab" data-tab="maker" id="tab-maker" data-i18n="tabMaker">Nhân vật</button>
         <button role="tab" data-tab="physics" data-i18n="tabPhysics">Vật lý</button>
         <button role="tab" data-tab="look" data-i18n="tabLook">Màu</button>
       </nav>
@@ -61,6 +60,12 @@
         <button class="button small" id="defaults-restore" disabled data-i18n="defaultsRestore" data-i18n-title="defaultsRestoreHint">Về mặc định đã lưu</button>
         <button class="button small" id="defaults-original" data-i18n="defaultsOriginal" data-i18n-title="defaultsOriginalHint">Về gốc</button>
       </div>
+
+      <section class="tab-panel" data-panel="other" hidden>
+        <h2 data-i18n="otherTitle">Animation preview only</h2>
+        <p class="hint" data-i18n="otherInfo"></p>
+        <p class="hint" data-i18n="otherAnimation"></p>
+      </section>
 
       <section class="tab-panel" data-panel="info">
         <h2 data-i18n="cardInfo">Thông tin card</h2>
@@ -76,32 +81,17 @@
       </section>
 
       <section class="tab-panel" data-panel="maker" hidden>
-        <div id="shape-maker" hidden>
+        <div id="shape-maker">
           <p class="hint" data-i18n="shapeHint">Chỉnh bằng xương hình dáng như trình tạo nhân vật của game. Card lưu thông số; mod áp dụng khi nạp model.</p>
           <nav class="subtabs" id="shape-subtabs">
             <button data-shape-sub="body" class="active" data-i18n="makerBody">Cơ thể</button>
             <button data-shape-sub="face" data-i18n="makerFace">Mặt</button>
-            <button data-shape-sub="parts" data-i18n="makerParts">Bộ phận</button>
+            <button data-shape-sub="outfit" data-i18n="makerOutfit">Outfit</button>
           </nav>
           <div id="shape-controls"></div>
           <div class="row-actions">
             <button class="button small" id="shape-reset" data-i18n="shapeReset">Đặt lại tất cả</button>
-            <button class="button small" id="base-save" data-i18n="baseSave" data-i18n-title="baseSaveHint">Dùng làm model gốc</button>
           </div>
-        </div>
-        <div id="template-maker">
-        <div class="preset-row">
-          <span data-i18n="preset">Mẫu</span>
-          <button class="chip" data-preset="female" data-i18n="female">Nữ</button>
-          <button class="chip" data-preset="male" data-i18n="male">Nam</button>
-        </div>
-        <nav class="subtabs">
-          <button data-sub="body" class="active" data-i18n="makerBody">Cơ thể</button>
-          <button data-sub="face" data-i18n="makerFace">Mặt</button>
-          <button data-sub="hair" data-i18n="makerHair">Tóc</button>
-          <button data-sub="clothing" data-i18n="makerClothing">Trang phục</button>
-        </nav>
-        <div id="maker-controls"></div>
         </div>
       </section>
 
@@ -181,18 +171,6 @@
     <form method="dialog">
       <p id="message-text"></p>
       <button class="button primary">OK</button>
-    </form>
-  </dialog>
-
-  <dialog id="new-dialog">
-    <form method="dialog">
-      <h2 data-i18n="newCharacter">Tạo nhân vật</h2>
-      <p class="hint" data-i18n="newHint">Bắt đầu từ cơ thể gốc (chưa có quần áo, chỉ có mặt), rồi chỉnh trong tab Nhân vật.</p>
-      <div class="preset-choice">
-        <button class="button primary" value="female" data-i18n="female">Nữ</button>
-        <button class="button primary" value="male" data-i18n="male">Nam</button>
-        <button class="button" value="" data-i18n="cancel">Huỷ</button>
-      </div>
     </form>
   </dialog>
 

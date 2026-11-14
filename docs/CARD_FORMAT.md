@@ -144,18 +144,28 @@ values the author saved with **Save defaults**, so whoever opens the card in the
 them with **Back to saved defaults** after experimenting. The mod ignores it: what it applies is
 `settings`, `physics` and `shape`.
 
-## Imported parts
+## Outfit
 
-Clothing, hair, shoes and accessories imported in the studio are not a separate manifest field: when
-a card is exported with parts on, the character and its parts are written as one GLB
-(`model/character.glb`), with the parts' own bones added to the skeleton. The mod loads it like any
-other model, and the physics groups of the parts are in `physics`.
+The outfit is not a separate manifest field. A character card's model is one GLB
+(`model/character.glb`) holding the character and the outfit pieces imported in the studio, with
+**one skeleton**: every skinned mesh uses the same joint list (the character's bones, then the bones
+the outfit brought, such as a skirt's), so readers that take the first skin, like the mod, drive the
+outfit with the body's bones and physics. Imported pieces carry node extras so the studio can show
+them in their slots again:
 
-## Character maker (`template`, optional)
+| Extra | Meaning |
+|---|---|
+| `outfitSlot` | `hair`, `top`, `innerTop`, `bottom`, `underwear`, `socks`, `shoes` or `accessory` |
+| `outfitName` | The file the piece came from |
+| `outfitPart` | Pieces imported together share this number |
+| `outfitBone` (on bones) | A bone the outfit added to the skeleton |
 
-Cards made from the studio's base body keep the maker's sliders so the character can be edited again:
-`"template": { "version": 1, "params": { "preset": "female", "height": 0.4, ... } }`. Readers other than the
-studio ignore it.
+The character's own pieces that an imported piece replaces are listed in `shape.hidden.materials`.
+
+## Character maker (`template`, obsolete)
+
+Early studio versions wrote `"template": { "version": 1, "params": {...} }` for characters built from
+their own base body. That maker is gone; readers ignore the field.
 
 ## Limits
 

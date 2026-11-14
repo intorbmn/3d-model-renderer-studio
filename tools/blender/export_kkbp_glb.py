@@ -104,6 +104,21 @@ def find_image(material):
     return None
 
 
+def has_cutout(image):
+    """True when the texture's alpha cuts parts away (a bra's lace, a frayed hem): over 1% of it
+    is below one half. KKBP's clothes rely on that alpha; without a cutoff it renders black."""
+    try:
+        import numpy as np
+
+        if image.channels < 4 or len(image.pixels) == 0:
+            return False
+        pixels = np.empty(len(image.pixels), dtype=np.float32)
+        image.pixels.foreach_get(pixels)
+        return float((pixels[3::4] < 0.5).mean()) > 0.01
+    except Exception:  # an image Blender cannot read: keep it opaque
+        return False
+
+
 def simplify_material(material):
     image = find_image(material)
     if image is None or material.name.startswith("Outline "):
@@ -118,7 +133,7 @@ def simplify_material(material):
     tex.image = image
     links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
     bsdf.inputs["Roughness"].default_value = 0.8
-    if ALPHA_MATERIALS.search(material.name):
+    if ALPHA_MATERIALS.search(material.name) or has_cutout(image):
         # Alpha clip (glTF MASK): a "greater than 0.5" node is what the exporter reads as a cutoff.
         clip = nodes.new("ShaderNodeMath")
         clip.operation = "GREATER_THAN"

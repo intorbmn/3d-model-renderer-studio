@@ -2,24 +2,14 @@ import { Viewer } from './viewer.js';
 import { FileSet, filesFromDrop, extensionOf } from './files.js';
 import { writeCard, readCard, isCard, isPng, CardError } from './card.js';
 import { t, setLanguage, currentLanguage, applyTranslations } from './i18n.js';
-import {
-  SLIDERS, HAIR_STYLES_ALL, TOPS, BOTTOMS, TEMPLATE_VERSION,
-  presetParams, sanitiseParams, exportCharacterGlb, templatePhysicsTuning,
-} from './template.js';
 import { detectGroups, fromVrm, PhysicsPreview, toManifest, chainFrom, makeGroup, collectBones, colliderForBone } from './physics.js';
 import { detectIllgamesCard, readIllgamesCharacter } from './illgames.js';
 import { FORMATS, exportModel } from './export.js';
-import { ShapeMaker, listParts, applyHidden } from './maker/shape.js';
-import { SLOTS, attachPart, detachPart, replacedMaterials, exportCombined } from './maker/parts.js';
+import { ShapeMaker, listParts, partLabel, applyHidden } from './maker/shape.js';
+import { SLOTS, slotOf, splitOutfit, attachPart, detachPart, partsFromModel, exportCombined } from './maker/parts.js';
 import * as store from './store.js';
 
 export const STUDIO_VERSION = '0.3.0';
-
-/**
- * The built-in character maker (template.js) is switched off until it gets a new base model.
- * Cards made with it still open, as ordinary GLB models.
- */
-const MAKER_ENABLED = false;
 
 const MOTIONS = [
   ['idle', 'idle.vmd'], ['walk', 'walk.vmd'], ['sprint', 'sprint.vmd'], ['sneak', 'sneak.vmd'],
@@ -37,13 +27,13 @@ const state = {
   preview: null,
   customVmdUrl: null,
   prefix: 'model/',
-  template: null, // maker sliders when the model is the built-in character
+  character: false, // an ILLGAMES character (the only kind the studio edits)
   physics: null,
   physicsPreview: null,
   physicsOn: true,
   shapeMaker: null, // character maker on shape bones (KKBP / ILLGAMES-style models)
   hiddenParts: new Set(), // material names hidden by the maker
-  parts: [], // imported clothing, hair, shoes, accessories on the character
+  parts: [], // imported outfit pieces on the character
   savedDefaults: null, // values the user saved to come back to
   original: null, // the model's own values
 };
@@ -125,7 +115,6 @@ async function openFiles(files) {
   const fileSet = FileSet.fromFiles(files);
   const entry = fileSet.findModel();
   if (!entry) return message(t('noModel'));
-  state.template = null;
   await loadModel(fileSet, entry, {
     name: entry.path.split('/').pop().replace(/\.[^.]+$/, ''),
     author: '', license: '', source: '', notes: '',
@@ -137,7 +126,6 @@ async function openCard(bytes) {
   try {
     const card = await readCard(bytes);
     const fileSet = FileSet.fromBytes(card.files);
-    state.template = MAKER_ENABLED && card.manifest.template?.params ? sanitiseParams(card.manifest.template.params) : null;
     await loadModel(fileSet, card.manifest.model, card.manifest, '', { physics: card.manifest.physics, shape: card.manifest.shape });
   } catch (error) {
     message(error instanceof CardError ? `${t('badCard')} ${error.message}` : String(error));
@@ -152,13 +140,7 @@ async function openIllgamesCard(bytes) {
     message(`${t('illgamesFailed')} ${error.message ?? error}`);
     return;
   }
-  if (!MAKER_ENABLED) {
-    message(t('illgamesInfo', { game: character.game, name: character.name ? `: ${character.name}` : '' }));
-    return;
-  }
-  state.template = sanitiseParams({ ...presetParams(character.sex), ...character.params });
-  await buildTemplate({ first: true, info: { name: character.name || 'Character', notes: `${character.game}` } });
-  message(t('illgamesCard', { game: character.game, name: character.name ? `: ${character.name}` : '' }));
+  message(t('illgamesInfo', { game: character.game, name: character.name ? `: ${character.name}` : '' }));
 }
 
 async function loadModel(fileSet, entry, info, prefix = 'model/', { keepCamera = false, physics = null, shape = null } = {}) {
@@ -186,26 +168,47 @@ async function loadModel(fileSet, entry, info, prefix = 'model/', { keepCamera =
     viewer.applyTints(state.settings.materialTints);
     buildMaterialList();
     buildExpressionList();
-    state.parts = [];
-    setupPhysics(model, physics);
+    // Pieces imported earlier and saved in the card come back in their slots.
+    state.parts = model.kind === 'gltf' ? partsFromModel(model) : [];
     setupShapeMaker(model, shape);
-    await setupDefaults(model, info?.editor?.defaults);
+    state.character = !!state.shapeMaker;
+    if (state.character) {
+      setupPhysics(model, physics);
+      await setupDefaults(model, info?.editor?.defaults);
+    } else {
+      state.physics = null;
+      state.savedDefaults = null;
+    }
     await selectMotion($('motion').value);
     showModelStatus(model);
-    for (const id of ['export-card', 'retake', 'export-model', 'export-format']) $(id).disabled = false;
-    $('defaults-bar').hidden = false;
-    $('tab-maker').hidden = !state.template && !state.shapeMaker;
-    $('template-maker').hidden = !state.template;
-    $('shape-maker').hidden = !state.shapeMaker;
-    // Rebuilding the controls while a slider is being dragged would cut the drag short.
-    if (state.template && !keepCamera) buildMaker();
-    if (state.shapeMaker) buildShapeMaker();
-    if (!keepCamera) setTimeout(() => retakePreview(), 300);
+    setMode(state.character);
+    if (state.character) buildShapeMaker();
+    if (!keepCamera && state.character) setTimeout(() => retakePreview(), 300);
   } catch (error) {
     console.error(error);
     $('empty').hidden = false;
     setStatus([[`${t('loadFailed')} ${error.message ?? error}`, 'warn']]);
   }
+}
+
+/**
+ * The studio edits ILLGAMES characters (models with the games' shape bones, like the sample
+ * model). Other models only get the motion preview: in the mod they work like in MMD Skin.
+ */
+function setMode(character) {
+  $('tabs').hidden = !character;
+  $('defaults-bar').hidden = !character;
+  for (const id of ['export-card', 'retake', 'export-model', 'export-format']) $(id).disabled = !character;
+  $('card-preview').hidden = !character;
+  $('retake').hidden = !character;
+  showTab(character ? 'maker' : 'other');
+}
+
+/** ILLGAMES characters: the games' body and face shape bones are there. */
+function isIllgamesCharacter(model) {
+  const names = new Set(collectBones(model).map(({ name }) => name));
+  const shapeBones = [...names].filter((n) => /^cf_[sdjJ]_/.test(n)).length;
+  return shapeBones >= 40 && names.has('cf_J_FaceBase') && (names.has('cf_s_spine02') || names.has('cf_s_waist01'));
 }
 
 // ---------- shape-bone maker (KKBP / ILLGAMES-style models)
@@ -215,7 +218,7 @@ let shapeSub = 'body';
 function setupShapeMaker(model, fromCard) {
   state.shapeMaker = null;
   state.hiddenParts = new Set(fromCard?.hidden?.materials ?? []);
-  if (model.kind !== 'mmd') {
+  if (model.kind !== 'mmd' && isIllgamesCharacter(model)) {
     const bones = new Map(collectBones(model).map(({ name, bone }) => [name, bone]));
     const maker = new ShapeMaker(model, bones, viewer.modelHeight());
     if (maker.usable) {
@@ -224,7 +227,6 @@ function setupShapeMaker(model, fromCard) {
     }
   }
   applyHidden(model, state.hiddenParts);
-  if (state.shapeMaker) showTab('maker');
 }
 
 function buildShapeMaker() {
@@ -233,40 +235,10 @@ function buildShapeMaker() {
   box.replaceChildren();
   for (const b of document.querySelectorAll('[data-shape-sub]')) {
     b.classList.toggle('active', b.dataset.shapeSub === shapeSub);
-    b.hidden = b.dataset.shapeSub !== 'parts' && !maker.groups().includes(b.dataset.shapeSub);
+    b.hidden = b.dataset.shapeSub !== 'outfit' && !maker.groups().includes(b.dataset.shapeSub);
   }
-  if (shapeSub === 'parts') {
-    box.append(el('p', { className: 'hint', textContent: t('partsHint') }));
-    // Import a piece of clothing, hair, shoes or an accessory.
-    const slot = el('select', { id: 'part-slot' });
-    for (const s of SLOTS) slot.append(new Option(t(`slot_${s}`), s));
-    const file = el('input', { type: 'file', multiple: true, hidden: true, accept: '.glb,.gltf,.bin,.png,.jpg,.jpeg' });
-    file.addEventListener('change', () => {
-      if (file.files.length) importPart(file.files, slot.value);
-      file.value = '';
-    });
-    const pick = el('label', { className: 'button small' }, [file, el('span', { textContent: t('partsImport') })]);
-    box.append(el('div', { className: 'import-row' }, [slot, pick]));
-    for (const part of state.parts) {
-      const remove = el('button', { type: 'button', textContent: t('remove') });
-      remove.addEventListener('click', () => removePart(part));
-      box.append(el('div', { className: 'row imported' }, [
-        el('span', { className: 'label', textContent: `${t(`slot_${part.slot}`)}: ${part.name}` }), el('span'), remove]));
-    }
-    let mesh = null;
-    for (const part of listParts(viewer.model)) {
-      if (part.mesh !== mesh) {
-        mesh = part.mesh;
-        box.append(el('h3', { textContent: mesh }));
-      }
-      const input = el('input', { type: 'checkbox', checked: !state.hiddenParts.has(part.material) });
-      input.addEventListener('change', () => {
-        if (input.checked) state.hiddenParts.delete(part.material);
-        else state.hiddenParts.add(part.material);
-        applyHidden(viewer.model, state.hiddenParts);
-      });
-      box.append(el('label', { className: 'check part', title: part.material }, [input, ` ${part.label}`]));
-    }
+  if (shapeSub === 'outfit') {
+    buildOutfit(box);
     return;
   }
   for (const [id, group] of maker.sliders) {
@@ -345,44 +317,127 @@ $('defaults-save').addEventListener('click', async () => {
 $('defaults-restore').addEventListener('click', () => applySnapshot(state.savedDefaults));
 $('defaults-original').addEventListener('click', () => applySnapshot(state.original));
 
-$('base-save').addEventListener('click', async () => {
-  if (!viewer.model || !state.fileSet) return;
-  const files = [];
-  for (const path of state.fileSet.paths) files.push([path, await state.fileSet.bytes(path)]);
-  const ok = await store.set('base', { files, entry: state.entry, defaults: snapshot() });
-  await refreshBaseButton();
-  setStatus([[ok ? t('baseSaved') : t('baseNotSaved'), ok ? 'ok' : 'warn']]);
-});
+// ---------- outfit: hair, top, inner top, bottom, underwear, socks, shoes, accessories
 
-// ---------- imported parts (clothing, hair, shoes, accessories)
+const openSlots = new Set();
 
-async function importPart(files, slot) {
+/** Every piece the character wears, per slot: its own (from its file) and imported ones. */
+function outfitItems() {
+  const imported = new Set(state.parts.flatMap((p) => p.materials));
+  const items = new Map([...SLOTS, 'body'].map((slot) => [slot, []]));
+  for (const part of listParts(viewer.model)) {
+    if (imported.has(part.material)) continue;
+    items.get(slotOf(part.material) ?? 'body').push({ material: part.material, label: part.label });
+  }
+  return items;
+}
+
+function visibilityToggle(material, label) {
+  const input = el('input', { type: 'checkbox', checked: !state.hiddenParts.has(material) });
+  input.addEventListener('change', () => {
+    if (input.checked) state.hiddenParts.delete(material);
+    else state.hiddenParts.add(material);
+    applyHidden(viewer.model, state.hiddenParts);
+    buildShapeMaker();
+  });
+  return el('label', { className: 'check part', title: material }, [input, ` ${label}`]);
+}
+
+function importButton(label, slot) {
+  const file = el('input', { type: 'file', multiple: true, hidden: true, accept: '.glb,.gltf,.bin,.png,.jpg,.jpeg' });
+  file.addEventListener('change', () => {
+    if (file.files.length) importOutfit(file.files, slot);
+    file.value = '';
+  });
+  return el('label', { className: `button small${slot ? '' : ' primary'}` }, [file, el('span', { textContent: label })]);
+}
+
+function buildOutfit(box) {
+  box.append(el('p', { className: 'hint', textContent: t('outfitHint') }));
+  box.append(el('div', { className: 'import-row' }, [importButton(t('outfitImport'), null)]));
+  const own = outfitItems();
+  for (const slot of [...SLOTS, 'body']) {
+    const parts = state.parts.filter((p) => p.slot === slot);
+    const mine = own.get(slot);
+    if (slot === 'body' && mine.length === 0) continue;
+    const names = [...parts.map((p) => p.name), ...mine.filter((i) => !state.hiddenParts.has(i.material)).map((i) => i.label)];
+    const details = el('details', { className: 'slot', open: openSlots.has(slot) });
+    details.addEventListener('toggle', () => { if (details.open) openSlots.add(slot); else openSlots.delete(slot); });
+    details.append(el('summary', {}, [
+      el('span', { className: 'slot-name', textContent: t(`slot_${slot}`) }),
+      el('span', { className: 'slot-value', textContent: names.join(', ') || t('outfitEmpty') }),
+    ]));
+    const body = el('div', { className: 'slot-body' });
+    for (const part of parts) {
+      const remove = el('button', { type: 'button', className: 'link', textContent: t('remove') });
+      remove.addEventListener('click', () => removePart(part));
+      body.append(el('div', { className: 'row imported' }, [el('span', { className: 'label', textContent: part.name, title: part.materials.join(', ') }), remove]));
+      for (const material of part.materials) body.append(visibilityToggle(material, partLabel(material)));
+    }
+    for (const item of mine) body.append(el('div', {}, [visibilityToggle(item.material, `${item.label} (${t('outfitFromModel')})`)]));
+    if (slot !== 'body') body.append(el('div', { className: 'import-row' }, [importButton(t('outfitImportSlot'), slot)]));
+    details.append(body);
+    box.append(details);
+  }
+}
+
+/** Shows that a slot is taken by an imported piece: the character's own piece there is hidden. */
+function hideOwn(slot, hide) {
+  for (const item of outfitItems().get(slot) ?? []) {
+    if (hide) state.hiddenParts.add(item.material);
+    else state.hiddenParts.delete(item.material);
+  }
+}
+
+/**
+ * Imports an outfit file. Without `slot`, it is split into its pieces (top, bottom, socks, ...),
+ * each replacing what the character wears in that slot; hair in the file is used only when the
+ * character has none showing. With `slot`, the file's pieces of that slot go there.
+ */
+async function importOutfit(files, slot = null) {
   const model = viewer.model;
-  if (!model || model.kind !== 'gltf') return message(t('partsGltfOnly'));
+  if (!model || model.kind !== 'gltf' || !state.character) return message(t('partsGltfOnly'));
   const fileSet = FileSet.fromFiles([...files]);
   const entry = fileSet.findModel();
   if (!entry || !['glb', 'gltf'].includes(entry.type)) return message(t('partsNeedGltf'));
   try {
     const gltf = await viewer.loadGltfScene(fileSet, entry);
     const name = entry.path.split('/').pop().replace(/\.[^.]+$/, '');
-    const part = attachPart(model, gltf, slot, name);
-    part.fileSet = fileSet;
-    // Put on in place of the character's own piece of the same kind.
-    part.hid = replacedMaterials(model, slot, new Set(part.materials)).filter((m) => !state.hiddenParts.has(m));
-    for (const m of part.hid) state.hiddenParts.add(m);
-    state.parts.push(part);
+    const pieces = splitOutfit(gltf, slot);
+    let hairKept = false;
+    if (!slot && pieces.has('hair')) {
+      const hairShowing = state.parts.some((p) => p.slot === 'hair')
+        || outfitItems().get('hair').some((i) => !state.hiddenParts.has(i.material));
+      if (hairShowing) {
+        pieces.delete('hair');
+        hairKept = true;
+      }
+    }
+    for (const [s, meshes] of pieces) {
+      for (const old of state.parts.filter((p) => p.slot === s)) takeOff(old);
+      const part = attachPart(model, meshes, s, name);
+      part.fileSet = fileSet;
+      state.parts.push(part);
+      hideOwn(s, true);
+    }
     afterPartsChanged();
+    if (hairKept) setStatus([[t('outfitHairKept'), 'warn']]);
   } catch (error) {
     console.error(error);
     message(`${t('partsFailed')} ${error.message ?? error}`);
   }
 }
 
-function removePart(part) {
-  detachPart(viewer.model, part);
-  part.fileSet?.dispose?.();
-  for (const m of part.hid ?? []) state.hiddenParts.delete(m);
+function takeOff(part) {
   state.parts = state.parts.filter((p) => p !== part);
+  detachPart(viewer.model, part, state.parts);
+  for (const m of part.materials) state.hiddenParts.delete(m);
+}
+
+function removePart(part) {
+  takeOff(part);
+  // Nothing imported left in the slot: the character's own piece shows again.
+  if (!state.parts.some((p) => p.slot === part.slot)) hideOwn(part.slot, false);
   afterPartsChanged();
 }
 
@@ -393,8 +448,7 @@ function afterPartsChanged() {
   viewer.applyTints(state.settings.materialTints);
   buildMaterialList();
   // New bones (a ponytail, a skirt) get physics; the user's own edits are kept.
-  const tuning = state.template ? templatePhysicsTuning(state.template) : {};
-  state.physics = detectGroups(viewer.model, tuning);
+  state.physics = detectGroups(viewer.model);
   if (previous) mergePhysics(previous);
   else applyPhysics();
   fillRootBones(viewer.model);
@@ -431,7 +485,7 @@ function renderFacts(model) {
   });
   const groups = state.physics?.groups?.filter((g) => g.enabled) ?? [];
   const facts = [
-    [t('format'), state.template ? `${state.entry.type.toUpperCase()} · ${t('tabMaker')}` : state.entry.type.toUpperCase()],
+    [t('format'), state.character ? `${state.entry.type.toUpperCase()} · ILLGAMES` : state.entry.type.toUpperCase()],
     [t('vertices'), vertices.toLocaleString()],
     [t('materials'), String(materials)],
     [t('files'), String(state.fileSet.paths.length)],
@@ -441,120 +495,6 @@ function renderFacts(model) {
   $('facts').replaceChildren(...facts.flatMap(([k, v]) => [el('dt', { textContent: k }), el('dd', { textContent: v })]));
 }
 
-// ---------- character maker
-
-const MAKER_LAYOUT = {
-  body: ['height', 'headSize', 'neckLength', 'shoulderWidth', 'bustSize', 'bustSoftness', 'waist', 'hipWidth',
-    'armThickness', 'thighThickness', 'legLength', 'c:skinColor'],
-  face: ['eyeSize', 'eyeHeight', 'eyeSpacing', 'c:eyeColor'],
-  hair: ['o:hairStyle', 'hairLength', 'hairVolume', 'hairSoftness', 'c:hairColor'],
-  clothing: ['o:top', 'c:topColor', 'topLength', 'o:bottom', 'c:bottomColor', 'bottomLength', 'clothingSoftness'],
-};
-const OPTIONS = { hairStyle: HAIR_STYLES_ALL, top: TOPS, bottom: BOTTOMS };
-let makerSub = 'body';
-
-function buildMaker() {
-  const box = $('maker-controls');
-  box.replaceChildren();
-  const params = state.template;
-  for (const chip of document.querySelectorAll('[data-preset]')) chip.classList.toggle('active', chip.dataset.preset === params.preset);
-  for (const b of document.querySelectorAll('.subtabs [data-sub]')) b.classList.toggle('active', b.dataset.sub === makerSub);
-  for (const item of MAKER_LAYOUT[makerSub]) {
-    const [kind, key] = item.includes(':') ? item.split(':') : ['s', item];
-    const row = el('label', { className: 'maker-row' });
-    if (kind === 's') {
-      const input = el('input', { type: 'range', min: 0, max: 100, step: 1, value: Math.round(params[key] * 100) });
-      const out = el('output', { textContent: input.value });
-      input.addEventListener('input', () => {
-        out.textContent = input.value;
-        params[key] = Number(input.value) / 100;
-        scheduleRebuild();
-      });
-      row.append(el('span', { textContent: t(`s_${key}`) }), input, out);
-    } else if (kind === 'c') {
-      const input = el('input', { type: 'color', value: params[key] });
-      input.addEventListener('input', () => {
-        params[key] = input.value;
-        scheduleRebuild();
-      });
-      row.append(el('span', { textContent: t(`c_${key}`) }), input);
-    } else {
-      const select = el('select');
-      for (const option of OPTIONS[key]) select.append(new Option(t(`o_${option}`), option));
-      select.value = params[key];
-      select.addEventListener('change', () => {
-        params[key] = select.value;
-        scheduleRebuild();
-      });
-      row.append(el('span', { textContent: t(key) }), select);
-    }
-    box.append(row);
-  }
-}
-
-for (const b of document.querySelectorAll('.subtabs [data-sub]')) {
-  b.addEventListener('click', () => {
-    makerSub = b.dataset.sub;
-    buildMaker();
-  });
-}
-for (const chip of document.querySelectorAll('[data-preset]')) {
-  chip.addEventListener('click', () => {
-    state.template = presetParams(chip.dataset.preset);
-    buildMaker();
-    scheduleRebuild(0);
-  });
-}
-
-let rebuildTimer = null;
-let rebuilding = Promise.resolve();
-function scheduleRebuild(delay = 250) {
-  clearTimeout(rebuildTimer);
-  rebuildTimer = setTimeout(() => {
-    rebuilding = rebuilding.then(() => buildTemplate({ first: false })).catch((e) => console.error(e));
-  }, delay);
-}
-
-/** Builds the character from the maker sliders and loads it like any other model. */
-async function buildTemplate({ first, info = null }) {
-  const bytes = await exportCharacterGlb(state.template);
-  const fileSet = FileSet.fromBytes(new Map([['character.glb', bytes]]));
-  const previous = state.physics;
-  const fields = info
-    ? { author: '', license: '', source: '', notes: '', settings: { scale: 1, materialTints: {} }, ...info }
-    : null;
-  await loadModel(fileSet, { path: 'character.glb', type: 'glb' }, fields, 'model/', { keepCamera: !first });
-  // Keep the user's own physics edits across rebuilds where the bones still exist.
-  if (!first && previous) mergePhysics(previous);
-  if (!first) state.preview = null;
-}
-
-// "New character" starts from the base model the user saved in this browser.
-async function refreshBaseButton() {
-  $('new-character').hidden = !(await store.get('base'));
-}
-$('new-character').addEventListener('click', async () => {
-  const base = await store.get('base');
-  if (!base) return;
-  state.template = null;
-  const fileSet = FileSet.fromBytes(new Map(base.files));
-  await loadModel(fileSet, base.entry, {
-    name: 'Character', author: '', license: '', source: '', notes: '',
-    settings: { scale: 1, materialTints: {} }, editor: { defaults: base.defaults },
-  });
-  if (state.savedDefaults) applySnapshot(state.savedDefaults);
-  showTab('maker');
-});
-refreshBaseButton();
-$('new-dialog').addEventListener('close', async () => {
-  const preset = $('new-dialog').returnValue;
-  if (!preset) return;
-  state.template = presetParams(preset);
-  makerSub = 'body';
-  await buildTemplate({ first: true, info: { name: preset === 'male' ? 'Male' : 'Female' } });
-  showTab('maker');
-});
-
 // ---------- physics
 
 function setupPhysics(model, fromCard) {
@@ -563,8 +503,7 @@ function setupPhysics(model, fromCard) {
   } else if (fromCard?.groups) {
     state.physics = structuredClone(fromCard);
   } else {
-    const tuning = state.template ? templatePhysicsTuning(state.template) : {};
-    state.physics = fromVrm(model) ?? detectGroups(model, tuning);
+    state.physics = fromVrm(model) ?? detectGroups(model);
   }
   state.physicsPreview = new PhysicsPreview(model);
   state.physicsPreview.setShowColliders($('colliders-show').checked, viewer.scene);
@@ -695,8 +634,7 @@ function fillRootBones(model) {
 
 $('physics-detect').addEventListener('click', () => {
   if (!viewer.model || viewer.model.kind === 'mmd') return;
-  const tuning = state.template ? templatePhysicsTuning(state.template) : {};
-  state.physics = detectGroups(viewer.model, tuning);
+  state.physics = detectGroups(viewer.model);
   applyPhysics();
   renderPhysics();
 });
@@ -861,7 +799,7 @@ function download(bytes, name, type) {
 
 async function exportCard() {
   if (!viewer.model || !state.fileSet) return;
-  await rebuilding;
+  if (!state.character) return;
   if (!state.preview) await retakePreview();
   const files = [];
   for (const path of state.fileSet.paths) files.push({ path: state.prefix + path, data: await state.fileSet.bytes(path) });
@@ -877,12 +815,12 @@ async function exportCard() {
   };
   const manifestExtras = {};
   if (viewer.model.kind !== 'mmd' && state.physics) manifestExtras.physics = toManifest(state.physics);
-  if (state.template) manifestExtras.template = { version: TEMPLATE_VERSION, params: state.template };
   const shape = viewer.model.kind !== 'mmd' ? shapeManifest() : null;
   if (shape) manifestExtras.shape = shape;
   if (state.savedDefaults) manifestExtras.editor = { version: 1, defaults: state.savedDefaults };
-  if (state.parts.length > 0) {
-    // Character and imported parts as one model, so the mod loads them like any other.
+  if (viewer.model.kind === 'gltf') {
+    // The character and its outfit as one model with one skeleton, so the mod loads it like any
+    // other and the outfit follows the body's bones and physics.
     files.length = 0;
     files.push({ path: 'model/character.glb', data: await exportCombined(viewer.model) });
     info.model = { path: 'model/character.glb', type: 'glb' };
@@ -901,8 +839,7 @@ function buildFormatList() {
 }
 
 async function exportCurrentModel() {
-  if (!viewer.model) return;
-  await rebuilding;
+  if (!viewer.model || !state.character) return;
   const format = $('export-format').value;
   const base = ($('f-name').value.trim() || 'model');
   try {
@@ -927,11 +864,6 @@ window.studio.exportCard = exportCard;
 window.studio.exportModel = (format) => exportModel(viewer.model, format);
 window.studio.openFiles = openFiles;
 window.studio.openCard = openCard;
-window.studio.newCharacter = async (preset) => {
-  state.template = presetParams(preset);
-  await buildTemplate({ first: true, info: { name: preset } });
-};
-window.studio.rebuild = () => buildTemplate({ first: false });
 
 // ---------- file inputs and drag & drop
 
@@ -966,7 +898,6 @@ $('language').addEventListener('change', () => {
     showModelStatus(viewer.model);
     buildMaterialList();
     renderPhysics();
-    if (state.template) buildMaker();
     if (state.shapeMaker) buildShapeMaker();
   }
 });
