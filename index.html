@@ -23,12 +23,13 @@
       <span class="brand-name">3D Model Renderer <b>Studio</b></span>
     </div>
     <div class="actions">
+      <button class="button" id="open-blend" data-i18n="blendTool" data-i18n-title="blendToolHint">.blend → GLB</button>
       <label class="button" title="" data-i18n-title="openFolderHint">
         <input type="file" id="pick-folder" webkitdirectory multiple hidden>
         <span data-i18n="openFolder">Mở thư mục model</span>
       </label>
       <label class="button">
-        <input type="file" id="pick-files" multiple hidden accept=".pmx,.pmd,.vrm,.glb,.gltf,.bin,.png,.jpg,.jpeg,.bmp,.tga,.dds,.spa,.sph,.json">
+        <input type="file" id="pick-files" multiple hidden accept=".pmx,.pmd,.vrm,.glb,.gltf,.blend,.bin,.png,.jpg,.jpeg,.bmp,.tga,.dds,.spa,.sph,.json">
         <span data-i18n="openFiles">Mở file</span>
       </label>
       <label class="button">
@@ -188,6 +189,34 @@
       <dl class="facts" id="facts"></dl>
     </aside>
   </main>
+
+  <dialog id="blend-dialog" class="wide-dialog">
+    <form method="dialog">
+      <h2 data-i18n="blendTitle">.blend → body + outfit</h2>
+      <p class="hint" data-i18n="blendIntro"></p>
+      <div class="box">
+        <h3 data-i18n="blendAddonTitle">In Blender (add-on)</h3>
+        <ol class="steps">
+          <li data-i18n="blendAddon1"></li>
+          <li data-i18n="blendAddon2"></li>
+          <li data-i18n="blendAddon3"></li>
+        </ol>
+        <a class="button primary small" href="tools/blender/export_kkbp_glb.py" download="export_kkbp_glb.py" data-i18n="blendDownloadAddon">Download the add-on</a>
+      </div>
+      <div class="box">
+        <h3 data-i18n="blendBatTitle">Windows: drag and drop</h3>
+        <ol class="steps">
+          <li data-i18n="blendBat1"></li>
+          <li data-i18n="blendBat2"></li>
+          <li data-i18n="blendBat3"></li>
+        </ol>
+        <a class="button small" href="tools/blender/kkbp_to_studio.bat" download="kkbp_to_studio.bat" data-i18n="blendDownloadBat">Download kkbp_to_studio.bat</a>
+        <a class="button small" href="tools/blender/export_kkbp_glb.py" download="export_kkbp_glb.py" data-i18n="blendDownloadScript">Download export_kkbp_glb.py</a>
+      </div>
+      <p class="hint" data-i18n="blendAfter"></p>
+      <button class="button" value="close" data-i18n="close">Close</button>
+    </form>
+  </dialog>
 
   <dialog id="message">
     <form method="dialog">

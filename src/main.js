@@ -107,6 +107,8 @@ for (const b of document.querySelectorAll('.tabs [data-tab]')) b.addEventListene
 async function openFiles(files) {
   files = [...files];
   if (files.length === 0) return;
+  // A browser cannot run Blender: explain how to turn the .blend into GLB files.
+  if (files.some((f) => extensionOf(f.name) === 'blend')) return $('blend-dialog').showModal();
   if (files.length === 1 && extensionOf(files[0].name) === 'png') {
     const bytes = new Uint8Array(await files[0].arrayBuffer());
     if (isCard(bytes)) return openCard(bytes);
@@ -1004,6 +1006,8 @@ window.studio.openFiles = openFiles;
 window.studio.openCard = openCard;
 
 // ---------- file inputs and drag & drop
+
+$('open-blend').addEventListener('click', () => $('blend-dialog').showModal());
 
 for (const id of ['pick-folder', 'pick-files', 'pick-card']) {
   $(id).addEventListener('change', (event) => {

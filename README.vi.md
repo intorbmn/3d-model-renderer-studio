@@ -49,6 +49,8 @@ Nhân vật và trang phục từ game ILLGAMES có thể xuất ra rồi đưa 
    blender --background character.blend --python tools/blender/export_kkbp_glb.py -- character.glb
    ```
 
+   Không cần dòng lệnh: cài `tools/blender/export_kkbp_glb.py` làm add-on Blender (Edit → Preferences → Add-ons → Install from Disk) rồi dùng **File → Export → Body + outfit for 3D Model Renderer Studio**, hoặc trên Windows kéo file `.blend` thả lên `tools/blender/kkbp_to_studio.bat` (để cạnh script). Cả hai cách đều ghi `<tên>_body.glb` và `<tên>_outfit.glb` cạnh file `.blend`. Nút **.blend → GLB** trong studio có link tải và các bước này.
+
    Lặp lại bước 1–3 với các bộ trang phục khác (hoặc nhân vật khác của cùng game) để có thêm outfit.
 4. **Trong studio**: mở `body.glb`, rồi vào **Outfit → Các món**, bấm **Nhập outfit** với `outfit.glb`. Các món tự vào đúng ô và gắn vào xương của cơ thể, nên đi theo cơ thể, thanh chỉnh hình dáng, động tác và vật lý.
 5. **Xuất card**: cơ thể và outfit được ghi thành một model với một khung xương, mod nạp như mọi model khác, outfit chuyển động theo xương và vật lý của cơ thể.

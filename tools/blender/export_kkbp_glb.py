@@ -12,19 +12,37 @@ KKBP builds a Rigify control rig and moves the mesh weights onto its DEF- bones.
 only the deform bones of that rig and drops the DEF- prefix, so the GLB has one clean skeleton with
 KKBP's bone names (Hips, Spine, Left arm, ...) that the mod recognises, in the rig's true rest pose.
 
-Usage (Blender 4.x or 5.x):
-    blender --background character.blend --python export_kkbp_glb.py -- output.glb [--no-outfit | --only-outfit]
+Three ways to use it (Blender 4.x or 5.x):
 
---no-outfit leaves the clothes and hair out (a base body); --only-outfit writes just them, as a part
-to put on a character in the studio's Parts list.
+  * As an add-on: Edit > Preferences > Add-ons > Install from Disk, pick this file and enable it.
+    Then File > Export > "Body + outfit for 3D Model Renderer Studio" (or the Studio tab of the
+    3D view's sidebar) writes <name>_body.glb and <name>_outfit.glb next to the saved .blend.
+  * On Windows, drag .blend files onto kkbp_to_studio.bat (kept next to this file).
+  * From the command line:
+        blender --background character.blend --python export_kkbp_glb.py -- output.glb [--no-outfit | --only-outfit]
+
+--no-outfit leaves the clothes and hair out (the body, with its face); --only-outfit writes just
+them, an outfit to import in the studio's Outfit tab.
 
 Only use this on characters you are allowed to use; the result contains the game's assets.
 """
 
+import os
 import re
+import subprocess
 import sys
 
 import bpy
+
+bl_info = {
+    "name": "3D Model Renderer Studio: KKBP body + outfit export",
+    "author": "3D Model Renderer Studio",
+    "version": (1, 1, 0),
+    "blender": (4, 2, 0),
+    "location": "File > Export, 3D View > Sidebar > Studio",
+    "description": "Writes a KKBP character as body.glb and outfit.glb for 3D Model Renderer Studio",
+    "category": "Import-Export",
+}
 
 SKIP_OBJECTS = re.compile(r"^(WGT-|Widget|Facecard-|Face card|Gag Eyes|Tears|Tongue|.* Grid$)")
 ALPHA_MATERIALS = re.compile(r"eyelash|mayuge|hitomi|eyelid|namida|eyeline|hair|kage|tooth", re.I)
@@ -266,6 +284,11 @@ def strip_rigify(rig, meta):
 
 def main():
     output, no_outfit, only_outfit = args()
+    export(output, no_outfit, only_outfit)
+
+
+def export(output, no_outfit=False, only_outfit=False):
+    """Exports the open (KKBP) file. Changes the scene: run it on a file you do not save afterwards."""
     rigify, meta = find_armatures()
     # Rigify keeps the true rest pose of every deform bone (KKBP adjusts hair and accessory bones
     # after building the metarig), so the export uses the generated rig, stripped to its deform bones.
@@ -325,4 +348,81 @@ def main():
     print(f"written {output}")
 
 
-main()
+# ---------- Blender add-on: one click writes both files, from a separate Blender process, so the
+# open scene is not changed.
+
+
+def export_both(blend_path, blender=None, script=None):
+    """Writes <name>_body.glb and <name>_outfit.glb next to `blend_path`. Returns their paths."""
+    blender = blender or bpy.app.binary_path
+    script = script or os.path.abspath(__file__)
+    base = os.path.splitext(blend_path)[0]
+    outputs = []
+    for suffix, flag in (("_body.glb", "--no-outfit"), ("_outfit.glb", "--only-outfit")):
+        output = base + suffix
+        result = subprocess.run(
+            [blender, "--background", blend_path, "--python", script, "--", output, flag],
+            capture_output=True, text=True,
+        )
+        if result.returncode != 0 or not os.path.isfile(output):
+            log = (result.stdout + result.stderr).strip().splitlines()[-15:]
+            raise RuntimeError(f"export of {os.path.basename(output)} failed:\n" + "\n".join(log))
+        outputs.append(output)
+    return outputs
+
+
+class STUDIO_OT_export_kkbp(bpy.types.Operator):
+    """Write this KKBP character as <name>_body.glb and <name>_outfit.glb for 3D Model Renderer Studio"""
+
+    bl_idname = "export_scene.studio_kkbp"
+    bl_label = "Body + outfit for 3D Model Renderer Studio"
+
+    def execute(self, context):
+        if not bpy.data.filepath:
+            self.report({"ERROR"}, "Save the .blend file first (File > Save)")
+            return {"CANCELLED"}
+        if bpy.data.is_dirty:
+            bpy.ops.wm.save_mainfile()
+        context.window.cursor_set("WAIT")
+        try:
+            outputs = export_both(bpy.data.filepath)
+        except Exception as error:  # shown to the user, whatever went wrong
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        finally:
+            context.window.cursor_set("DEFAULT")
+        self.report({"INFO"}, "Written " + ", ".join(os.path.basename(o) for o in outputs))
+        return {"FINISHED"}
+
+
+class STUDIO_PT_panel(bpy.types.Panel):
+    bl_label = "3D Model Renderer Studio"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "Studio"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text="KKBP character to GLB")
+        layout.operator(STUDIO_OT_export_kkbp.bl_idname, text="Export body + outfit", icon="EXPORT")
+        layout.label(text="Files go next to the .blend")
+
+
+def menu_entry(self, context):
+    self.layout.operator(STUDIO_OT_export_kkbp.bl_idname, text="Body + outfit for 3D Model Renderer Studio (.glb)")
+
+
+def register():
+    bpy.utils.register_class(STUDIO_OT_export_kkbp)
+    bpy.utils.register_class(STUDIO_PT_panel)
+    bpy.types.TOPBAR_MT_file_export.append(menu_entry)
+
+
+def unregister():
+    bpy.types.TOPBAR_MT_file_export.remove(menu_entry)
+    bpy.utils.unregister_class(STUDIO_PT_panel)
+    bpy.utils.unregister_class(STUDIO_OT_export_kkbp)
+
+
+if __name__ == "__main__" and "--" in sys.argv:
+    main()
