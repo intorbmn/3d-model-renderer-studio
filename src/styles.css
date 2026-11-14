@@ -89,7 +89,7 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .statusbar .warn { color: #c4841d; }
 .motionbar { display: flex; gap: 8px; align-items: center; padding: 8px 14px; background: var(--panel); border-top: 1px solid var(--line); flex-wrap: wrap; }
 
-#card-preview { width: 100%; height: auto; border-radius: 12px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); margin-bottom: 10px; background: #222; }
+#card-preview { width: 100%; height: auto; border-radius: 8px; margin-bottom: 10px; }
 .facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 12px; margin: 12px 0 0; }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; overflow-wrap: anywhere; }

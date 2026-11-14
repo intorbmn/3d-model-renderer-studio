@@ -149,7 +149,8 @@ def strip_rigify(rig, meta):
     """Keeps only the deform bones of a Rigify rig and drops the DEF- prefix (bones and weights).
 
     Rigify parents its deform bones to control (ORG-/MCH-) bones; each kept bone is reparented to
-    its nearest deform ancestor, or, when there is none, to where the metarig puts it.
+    the deform bone that moves like its nearest such ancestor (ORG-Left arm -> DEF-Left arm), or,
+    when there is none, to where the metarig puts it.
     """
     bpy.ops.object.select_all(action="DESELECT")
     rig.hide_set(False)
@@ -168,15 +169,27 @@ def strip_rigify(rig, meta):
 
     # Weights on control bones (KKBP leaves some on "Left shoulder", "cf_j_siri_L", ...) would be
     # lost with those bones: move them to the matching DEF- bone or the nearest deform ancestor.
+    def deform_of(bone):
+        """The deform bone that moves like `bone`: itself, its DEF- twin (also for ORG-/MCH- bones)."""
+        if bone.use_deform:
+            return bone.name
+        plain = re.sub(r"^(ORG|MCH)-", "", bone.name)
+        return f"DEF-{plain}" if f"DEF-{plain}" in deform else None
+
+    def nearest_deform(bone):
+        """`bone` or its nearest ancestor that has a deform bone moving like it."""
+        while bone is not None:
+            target = deform_of(bone)
+            if target:
+                return target
+            bone = bone.parent
+        return None
+
     weight_targets = {}
     for bone in edit:
         if bone.use_deform:
             continue
-        target = f"DEF-{bone.name}" if f"DEF-{bone.name}" in deform else None
-        p = bone.parent
-        while target is None and p is not None:
-            target = p.name if p.use_deform else None
-            p = p.parent
+        target = nearest_deform(bone)
         if target:
             weight_targets[bone.name] = target
     for obj in bpy.data.objects:
@@ -187,10 +200,11 @@ def strip_rigify(rig, meta):
     for bone in edit:
         if not bone.use_deform:
             continue
-        p = bone.parent
-        while p is not None and not p.use_deform:
-            p = p.parent
-        target = p.name if p is not None else None
+        # KKBP hangs the games' helper bones (cf_s_elbo_L, cf_d_arm01_L, cf_d_forearm02_L, ...)
+        # from Rigify's ORG- bones; they must follow the matching DEF- bone, not the chest.
+        target = nearest_deform(bone.parent)
+        if target == bone.name:
+            target = None
         if target is None and meta is not None:
             m = meta.data.bones.get(base_bone_name(bone.name))
             m = m.parent if m is not None else None

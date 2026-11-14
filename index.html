@@ -51,8 +51,8 @@
   <main class="layout">
     <aside class="panel" id="side">
       <nav class="tabs" role="tablist">
-        <button role="tab" data-tab="maker" id="tab-maker" hidden data-i18n="tabMaker">Nhân vật</button>
         <button role="tab" data-tab="info" class="active" data-i18n="tabInfo">Card</button>
+        <button role="tab" data-tab="maker" id="tab-maker" hidden data-i18n="tabMaker">Nhân vật</button>
         <button role="tab" data-tab="physics" data-i18n="tabPhysics">Vật lý</button>
         <button role="tab" data-tab="look" data-i18n="tabLook">Màu</button>
       </nav>
@@ -61,6 +61,19 @@
         <button class="button small" id="defaults-restore" disabled data-i18n="defaultsRestore" data-i18n-title="defaultsRestoreHint">Về mặc định đã lưu</button>
         <button class="button small" id="defaults-original" data-i18n="defaultsOriginal" data-i18n-title="defaultsOriginalHint">Về gốc</button>
       </div>
+
+      <section class="tab-panel" data-panel="info">
+        <h2 data-i18n="cardInfo">Thông tin card</h2>
+        <label class="field"><span data-i18n="name">Tên</span><input id="f-name" maxlength="80"></label>
+        <label class="field"><span data-i18n="author">Tác giả model</span><input id="f-author" maxlength="120"></label>
+        <label class="field"><span data-i18n="license">Điều khoản sử dụng</span><textarea id="f-license" rows="2" maxlength="2000"></textarea></label>
+        <label class="field"><span data-i18n="source">Nguồn</span><input id="f-source" maxlength="300"></label>
+        <label class="field"><span data-i18n="notes">Ghi chú</span><textarea id="f-notes" rows="2" maxlength="2000"></textarea></label>
+        <label class="field slider"><span data-i18n="scale">Kích thước</span>
+          <input type="range" id="f-scale" min="0.5" max="2" step="0.01" value="1">
+          <output id="o-scale">1.00</output>
+        </label>
+      </section>
 
       <section class="tab-panel" data-panel="maker" hidden>
         <div id="shape-maker" hidden>
@@ -90,19 +103,6 @@
         </nav>
         <div id="maker-controls"></div>
         </div>
-      </section>
-
-      <section class="tab-panel" data-panel="info">
-        <h2 data-i18n="cardInfo">Thông tin card</h2>
-        <label class="field"><span data-i18n="name">Tên</span><input id="f-name" maxlength="80"></label>
-        <label class="field"><span data-i18n="author">Tác giả model</span><input id="f-author" maxlength="120"></label>
-        <label class="field"><span data-i18n="license">Điều khoản sử dụng</span><textarea id="f-license" rows="2" maxlength="2000"></textarea></label>
-        <label class="field"><span data-i18n="source">Nguồn</span><input id="f-source" maxlength="300"></label>
-        <label class="field"><span data-i18n="notes">Ghi chú</span><textarea id="f-notes" rows="2" maxlength="2000"></textarea></label>
-        <label class="field slider"><span data-i18n="scale">Kích thước</span>
-          <input type="range" id="f-scale" min="0.5" max="2" step="0.01" value="1">
-          <output id="o-scale">1.00</output>
-        </label>
       </section>
 
       <section class="tab-panel" data-panel="physics" hidden>

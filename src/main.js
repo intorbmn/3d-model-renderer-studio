@@ -830,19 +830,18 @@ async function retakePreview() {
   const g = canvas.getContext('2d');
   const w = canvas.width;
   const h = canvas.height;
-  const bg = g.createLinearGradient(0, 0, w, h);
-  bg.addColorStop(0, '#2b2f3c');
-  bg.addColorStop(1, '#5a3a55');
+  // Plain light background like the viewport, so nothing frames the model.
+  const bg = g.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#f6f7fa');
+  bg.addColorStop(1, '#dfe3ea');
   g.fillStyle = bg;
   g.fillRect(0, 0, w, h);
-  const scale = Math.min(w / image.width, (h - 70) / image.height);
-  g.drawImage(image, (w - image.width * scale) / 2, 6, image.width * scale, image.height * scale);
-  g.fillStyle = 'rgba(0,0,0,0.55)';
-  g.fillRect(0, h - 70, w, 70);
-  g.fillStyle = '#ffffff';
+  const scale = Math.min(w / image.width, (h - 64) / image.height);
+  g.drawImage(image, (w - image.width * scale) / 2, 4, image.width * scale, image.height * scale);
+  g.fillStyle = '#1f2329';
   g.font = '600 30px system-ui, sans-serif';
   g.fillText(($('f-name').value || 'Model').slice(0, 28), 20, h - 30);
-  g.fillStyle = '#ff9fb8';
+  g.fillStyle = '#6b7280';
   g.font = '15px system-ui, sans-serif';
   g.fillText('3D Model Renderer', 20, h - 10);
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
