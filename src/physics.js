@@ -40,7 +40,7 @@ const KIND_PATTERNS = [
 export const DEFAULTS = {
   hair: { stiffness: 1.0, drag: 0.45, gravity: 0.15, radius: 0.01, maxAngle: 80, mode: 'spring' },
   clothing: { stiffness: 0.8, drag: 0.5, gravity: 0.3, radius: 0.02, maxAngle: 70, mode: 'spring' },
-  body: { stiffness: 2.5, drag: 0.5, gravity: 0.06, radius: 0.0, maxAngle: 20, mode: 'jiggle', translation: 0.3 },
+  body: { stiffness: 2.5, drag: 0.5, gravity: 0.06, radius: 0.0, maxAngle: 1, mode: 'jiggle', translation: 0.3 },
   custom: { stiffness: 1.0, drag: 0.4, gravity: 0.1, radius: 0.01, maxAngle: 80, mode: 'spring' },
 };
 
