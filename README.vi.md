@@ -20,12 +20,23 @@ Mọi thứ chạy trong trình duyệt của bạn, không tải gì lên mạn
    - **Va chạm**: các vùng va chạm ở đầu, cổ, thân, ngực, hông, tay, chân giữ tóc và quần áo không xuyên qua người. Chỉnh cỡ, thêm vùng ở bất kỳ xương nào, bật *Show colliders* để xem.
    - *Preview* chạy vật lý trực tiếp khi model đang cử động.
    - Model PMX/PMD giữ vật lý rigid body có sẵn trong file; mod chạy vật lý đó.
-5. Tab **Colours**: màu theo từng material (mod áp dụng đúng màu này) và xem trước biểu cảm.
-6. **Export card**. Muốn sửa thì mở lại bằng *Open card*.
+5. Tab **Character**, cho model có xương hình dáng kiểu ILLGAMES (ví dụ nhân vật xuất bằng KKBP, xem bên dưới): thanh trượt cho cơ thể (đầu, cổ, vai, ngực, eo, hông, vòng một, tay, chân) và mặt (khuôn mặt, mắt, lông mày, mũi, miệng, tai), cùng danh sách **Parts** để ẩn/hiện từng phần (tóc, áo, quần, giày…). Nhấp đúp vào thanh trượt để đặt lại. Card lưu thông số và mod áp dụng khi nạp model, nên mọi card làm theo cách này đều chạy giống nhau.
+6. Tab **Colours**: màu theo từng material (mod áp dụng đúng màu này) và xem trước biểu cảm.
+7. **Export card**. Muốn sửa thì mở lại bằng *Open card*.
 
 **Export model** lưu model ra GLB, glTF, OBJ, STL hoặc PLY (OBJ/STL/PLY theo tư thế đang hiển thị), hoặc tải file gốc.
 
 **Card ILLGAMES** (Koikatsu, Koikatsu Sunshine, AI Shoujo / Honey Select 2, Honey Come, Summer Vacation Scramble…) được nhận ra và đọc, nhưng chỉ chứa thông số cho trình tạo nhân vật của game, không có model 3D. Trong lúc studio chưa có model gốc, hãy xuất nhân vật ra PMX (Koikatsu: KKBP exporter) rồi mở file đó.
+
+## Nhân vật từ KKBP
+
+[KKBP (KK Blender Porter Pack)](https://github.com/FlailingFog/KK-Blender-Porter-Pack) đưa nhân vật Koikatsu và các game ILLGAMES khác vào Blender. Để dùng trong studio, xuất nhân vật ra GLB bằng script trong repo này (Blender 4.x/5.x):
+
+```
+blender --background character.blend --python tools/blender/export_kkbp_glb.py -- character.glb
+```
+
+Script giữ lại các xương hình dáng mà tab Character dùng, tóc/quần áo thành từng phần, biểu cảm và xương tóc/váy/ngực cho vật lý, đồng thời đặt tên khung xương để mod nhận diện. Thêm `--no-outfit` để bỏ trang phục. File xuất ra chứa tài sản của game: chỉ dùng cho bản thân, không chia sẻ trừ khi điều khoản của game cho phép.
 
 ## Định dạng card
 

@@ -93,7 +93,8 @@ export function inferFromNames(names) {
   const fingers = new Map();
   names.forEach((raw, index) => {
     let { side, core } = normalise(raw);
-    let preference = 1;
+    // A "pelvis" sits below the hips in rigs that have both (KKBP: Hips -> Pelvis, Spine).
+    let preference = core === 'pelvis' ? 0 : 1;
     if (side !== 'center' && core.endsWith('d') && ['hip', 'knee', 'foot', 'leg', 'ankle'].includes(core.slice(0, -1))) {
       core = core.slice(0, -1);
       preference = 2;

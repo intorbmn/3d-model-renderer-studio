@@ -21,9 +21,9 @@ export const KINDS = ['hair', 'clothing', 'body', 'custom'];
 
 const KIND_PATTERNS = [
   ['hair', /hair|kami|髪|bang|maegami|ahoge|ponytail|twintail|もみあげ|おさげ/i],
-  ['clothing', /skirt|スカート|coat|cloth|cape|cloak|ribbon|リボン|necktie|tie_|ネクタイ|sleeve|袖|frill|dress|scarf|hood|apron|裾|衣|服/i],
-  ['body', /breast|bust|oppai|胸|乳|butt|hip_?jiggle|尻|belly|jiggle/i],
-  ['custom', /tail|しっぽ|尻尾|ear|耳|wing|羽|acce|acc_|chain|pendant|earring|tassel|房/i],
+  ['clothing', /skirt|(^|_)sk_\d|スカート|coat|cloth|cape|cloak|ribbon|リボン|necktie|tie_|ネクタイ|sleeve|袖|frill|dress|scarf|hood|apron|裾|衣|服/i],
+  ['body', /breast|bust|oppai|胸|乳|butt|siri|hip_?jiggle|尻|belly|jiggle/i],
+  ['custom', /tail|しっぽ|尻尾|(^|_)ears?(_|$)|耳|wing|羽|acce|acc_|chain|pendant|earring|tassel|房/i],
 ];
 
 export const DEFAULTS = {
@@ -33,7 +33,11 @@ export const DEFAULTS = {
   custom: { stiffness: 1.0, drag: 0.4, gravity: 0.1, radius: 0.01 },
 };
 
+/** Bones that are never physics: ILLGAMES shape bones (except hair), weight helpers, anchors, hit boxes. */
+const NOT_PHYSICS = /^(cf_s_|cf_J_(?!hair)|k_f_|a_n_|cf_hit_|cf_d_hit)/;
+
 export function kindOf(name) {
+  if (NOT_PHYSICS.test(name)) return null;
   for (const [kind, pattern] of KIND_PATTERNS) if (pattern.test(name)) return kind;
   return null;
 }
@@ -79,6 +83,13 @@ export function detectGroups(model, tuning = {}) {
     const chain = [root];
     used.add(root);
     let current = root;
+    // A hub (a bone with several chains under it, like a hair root) does not swing itself:
+    // each chain under it starts on its own.
+    const firstNext = childrenOf(root).filter((c) => kindByBone.get(c) === kind && !used.has(c));
+    if (firstNext.length > 1) {
+      for (const branch of firstNext) queue.push([branch, kind]);
+      return;
+    }
     for (;;) {
       const next = childrenOf(current).filter((c) => kindByBone.get(c) === kind && !used.has(c));
       if (next.length === 0) {
@@ -87,10 +98,12 @@ export function detectGroups(model, tuning = {}) {
         if (tail && chain.length >= 1) chain.push(tail);
         break;
       }
-      next.sort((a, b) => nameOf.get(a).localeCompare(nameOf.get(b)));
-      for (const branch of next.slice(1)) {
-        // Other branches become chains of their own.
-        queue.push([branch, kind]);
+      if (next.length > 1) {
+        // A fork: each branch becomes a chain of its own, and the hub itself does not swing
+        // (it would carry every branch with it).
+        // The stem above the fork is a hub too (a hair root group), so it is dropped as a whole.
+        for (const branch of next) queue.push([branch, kind]);
+        return;
       }
       current = next[0];
       used.add(current);

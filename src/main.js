@@ -9,6 +9,7 @@ import {
 import { detectGroups, fromVrm, PhysicsPreview, toManifest, chainFrom, makeGroup, collectBones, colliderForBone } from './physics.js';
 import { detectIllgamesCard, readIllgamesCharacter } from './illgames.js';
 import { FORMATS, exportModel } from './export.js';
+import { ShapeMaker, listParts, applyHidden } from './maker/shape.js';
 
 export const STUDIO_VERSION = '0.3.0';
 
@@ -38,6 +39,8 @@ const state = {
   physics: null,
   physicsPreview: null,
   physicsOn: true,
+  shapeMaker: null, // character maker on shape bones (KKBP / ILLGAMES-style models)
+  hiddenParts: new Set(), // material names hidden by the maker
 };
 window.studio = { viewer, state };
 
@@ -101,7 +104,7 @@ async function openCard(bytes) {
     const card = await readCard(bytes);
     const fileSet = FileSet.fromBytes(card.files);
     state.template = MAKER_ENABLED && card.manifest.template?.params ? sanitiseParams(card.manifest.template.params) : null;
-    await loadModel(fileSet, card.manifest.model, card.manifest, '', { physics: card.manifest.physics });
+    await loadModel(fileSet, card.manifest.model, card.manifest, '', { physics: card.manifest.physics, shape: card.manifest.shape });
   } catch (error) {
     message(error instanceof CardError ? `${t('badCard')} ${error.message}` : String(error));
   }
@@ -124,7 +127,7 @@ async function openIllgamesCard(bytes) {
   message(t('illgamesCard', { game: character.game, name: character.name ? `: ${character.name}` : '' }));
 }
 
-async function loadModel(fileSet, entry, info, prefix = 'model/', { keepCamera = false, physics = null } = {}) {
+async function loadModel(fileSet, entry, info, prefix = 'model/', { keepCamera = false, physics = null, shape = null } = {}) {
   setStatus([[t('loading')]]);
   $('empty').hidden = true;
   if (state.fileSet !== fileSet) state.fileSet?.dispose();
@@ -150,18 +153,106 @@ async function loadModel(fileSet, entry, info, prefix = 'model/', { keepCamera =
     buildMaterialList();
     buildExpressionList();
     setupPhysics(model, physics);
+    setupShapeMaker(model, shape);
     await selectMotion($('motion').value);
     showModelStatus(model);
     for (const id of ['export-card', 'retake', 'export-model', 'export-format']) $(id).disabled = false;
-    $('tab-maker').hidden = !state.template;
+    $('tab-maker').hidden = !state.template && !state.shapeMaker;
+    $('template-maker').hidden = !state.template;
+    $('shape-maker').hidden = !state.shapeMaker;
     // Rebuilding the controls while a slider is being dragged would cut the drag short.
     if (state.template && !keepCamera) buildMaker();
+    if (state.shapeMaker) buildShapeMaker();
     if (!keepCamera) setTimeout(() => retakePreview(), 300);
   } catch (error) {
     console.error(error);
     $('empty').hidden = false;
     setStatus([[`${t('loadFailed')} ${error.message ?? error}`, 'warn']]);
   }
+}
+
+// ---------- shape-bone maker (KKBP / ILLGAMES-style models)
+
+let shapeSub = 'body';
+
+function setupShapeMaker(model, fromCard) {
+  state.shapeMaker = null;
+  state.hiddenParts = new Set(fromCard?.hidden?.materials ?? []);
+  if (model.kind !== 'mmd') {
+    const bones = new Map(collectBones(model).map(({ name, bone }) => [name, bone]));
+    const maker = new ShapeMaker(model, bones, viewer.modelHeight());
+    if (maker.usable) {
+      state.shapeMaker = maker;
+      maker.setValues(fromCard?.sliders ?? {});
+    }
+  }
+  applyHidden(model, state.hiddenParts);
+  if (state.shapeMaker) showTab('maker');
+}
+
+function buildShapeMaker() {
+  const maker = state.shapeMaker;
+  const box = $('shape-controls');
+  box.replaceChildren();
+  for (const b of document.querySelectorAll('[data-shape-sub]')) {
+    b.classList.toggle('active', b.dataset.shapeSub === shapeSub);
+    b.hidden = b.dataset.shapeSub !== 'parts' && !maker.groups().includes(b.dataset.shapeSub);
+  }
+  if (shapeSub === 'parts') {
+    box.append(el('p', { className: 'hint', textContent: t('partsHint') }));
+    let mesh = null;
+    for (const part of listParts(viewer.model)) {
+      if (part.mesh !== mesh) {
+        mesh = part.mesh;
+        box.append(el('h3', { textContent: mesh }));
+      }
+      const input = el('input', { type: 'checkbox', checked: !state.hiddenParts.has(part.material) });
+      input.addEventListener('change', () => {
+        if (input.checked) state.hiddenParts.delete(part.material);
+        else state.hiddenParts.add(part.material);
+        applyHidden(viewer.model, state.hiddenParts);
+      });
+      box.append(el('label', { className: 'check part', title: part.material }, [input, ` ${part.label}`]));
+    }
+    return;
+  }
+  for (const [id, group] of maker.sliders) {
+    if (group !== shapeSub) continue;
+    const input = el('input', { type: 'range', min: 0, max: 100, step: 1, value: Math.round(maker.value(id) * 100) });
+    const out = el('output', { textContent: input.value });
+    input.addEventListener('input', () => {
+      out.textContent = input.value;
+      maker.setValue(id, Number(input.value) / 100);
+    });
+    input.addEventListener('dblclick', () => {
+      input.value = 50;
+      out.textContent = '50';
+      maker.setValue(id, 0.5);
+    });
+    box.append(el('label', { className: 'maker-row' }, [el('span', { textContent: t(`sh_${id}`) }), input, out]));
+  }
+}
+
+for (const b of document.querySelectorAll('[data-shape-sub]')) {
+  b.addEventListener('click', () => {
+    shapeSub = b.dataset.shapeSub;
+    buildShapeMaker();
+  });
+}
+$('shape-reset').addEventListener('click', () => {
+  if (!state.shapeMaker) return;
+  state.shapeMaker.setValues({});
+  state.hiddenParts.clear();
+  applyHidden(viewer.model, state.hiddenParts);
+  buildShapeMaker();
+});
+
+/** The card's `shape` section, or null when nothing is changed. */
+function shapeManifest() {
+  const shape = state.shapeMaker ? state.shapeMaker.toManifest() : { version: 1, sliders: {}, bones: {} };
+  shape.hidden = { materials: [...state.hiddenParts], meshes: [] };
+  const changed = Object.keys(shape.bones).length || shape.hidden.materials.length || Object.keys(shape.sliders).length;
+  return changed ? shape : null;
 }
 
 function showModelStatus(model) {
@@ -623,6 +714,8 @@ async function exportCard() {
   const manifestExtras = {};
   if (viewer.model.kind !== 'mmd' && state.physics) manifestExtras.physics = toManifest(state.physics);
   if (state.template) manifestExtras.template = { version: TEMPLATE_VERSION, params: state.template };
+  const shape = viewer.model.kind !== 'mmd' ? shapeManifest() : null;
+  if (shape) manifestExtras.shape = shape;
   const card = await writeCard(state.preview, { ...info, ...manifestExtras }, files);
   download(card, `${info.name || 'model'}.png`, 'image/png');
   return card;
@@ -701,6 +794,7 @@ $('language').addEventListener('change', () => {
     buildMaterialList();
     renderPhysics();
     if (state.template) buildMaker();
+    if (state.shapeMaker) buildShapeMaker();
   }
 });
 applyTranslations();

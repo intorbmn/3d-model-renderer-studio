@@ -58,6 +58,17 @@
       </nav>
 
       <section class="tab-panel" data-panel="maker" hidden>
+        <div id="shape-maker" hidden>
+          <p class="hint" data-i18n="shapeHint">Chỉnh bằng xương hình dáng như trình tạo nhân vật của game. Card lưu thông số; mod áp dụng khi nạp model.</p>
+          <nav class="subtabs" id="shape-subtabs">
+            <button data-shape-sub="body" class="active" data-i18n="makerBody">Cơ thể</button>
+            <button data-shape-sub="face" data-i18n="makerFace">Mặt</button>
+            <button data-shape-sub="parts" data-i18n="makerParts">Bộ phận</button>
+          </nav>
+          <div id="shape-controls"></div>
+          <button class="button small" id="shape-reset" data-i18n="shapeReset">Đặt lại tất cả</button>
+        </div>
+        <div id="template-maker">
         <div class="preset-row">
           <span data-i18n="preset">Mẫu</span>
           <button class="chip" data-preset="female" data-i18n="female">Nữ</button>
@@ -70,6 +81,7 @@
           <button data-sub="clothing" data-i18n="makerClothing">Trang phục</button>
         </nav>
         <div id="maker-controls"></div>
+        </div>
       </section>
 
       <section class="tab-panel" data-panel="info">

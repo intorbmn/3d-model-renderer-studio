@@ -102,6 +102,33 @@ PMD models keep their rigid-body physics; their cards have no `physics` section.
 | `radius` | Hit radius of the chain's joints, in the model file's units. |
 | `colliders[]` | Spheres (`tail` null) or capsules. `offset` and `tail` are relative to `bone`, along the bone's axes in the rest pose, in the file's units. |
 
+## Character shape (`shape`, optional)
+
+Edits made with the studio's character maker. Like the character makers of ILLGAMES titles, it shapes a
+character by moving, turning and scaling bones (the "shape bones": `cf_s_*` for the body, `cf_J_*` for
+the face, or main bones where an export moved the weights there) and by hiding parts. The mod writes this
+object as `shape.json` next to the extracted model and bakes it into the model's rest pose when it loads
+it (VRM, GLB and glTF models).
+
+```json
+"shape": {
+  "version": 1,
+  "sliders": { "headSize": 0.6, "eyeSpacing": 0.55 },
+  "bones": {
+    "cf_s_head": { "s": [1.04, 1.04, 1.04] },
+    "cf_J_Eye_tx_L": { "t": [0.0006, 0, 0] },
+    "Left leg": { "s": [1.1, 1, 1.1] }, "Left knee": { "s": [0.909, 1, 0.909] }
+  },
+  "hidden": { "materials": ["SVS m_cloth_cf_top_tshirt00 9140"], "meshes": [] }
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `sliders` | The maker's slider values (0..1, 0.5 = as modelled). Only the studio reads them, to edit again. |
+| `bones` | Per bone (glTF node name): `t` added to its position (parent's axes, file units), `r` a turn in degrees (X, Y, Z, after its own rotation), `s` multiplied into its scale. |
+| `hidden.materials`, `hidden.meshes` | Parts that are not drawn. |
+
 ## Animations (by file placement)
 
 A card can carry its own motions without any extra manifest field: a VMD named after a mod slot

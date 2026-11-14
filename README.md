@@ -20,12 +20,23 @@ Everything runs in your browser. Nothing is uploaded.
    - **Collision**: colliders on the head, neck, spine, chest, hips, arms and legs keep hair and clothes out of the body. Resize them, add one on any bone, and turn on *Show colliders* to see them.
    - *Preview* runs the physics live while the motion plays.
    - PMX/PMD models keep the rigid-body physics in their file; the mod runs that.
-5. **Colours** tab: a tint per material (the mod applies the same tints) and an expression preview.
-6. **Export card**. Re-open a card later with *Open card* to change it.
+5. **Character** tab, for models with ILLGAMES-style shape bones (for example characters exported with KKBP, see below): sliders for the body (head, neck, shoulders, chest, waist, hips, bust, arms, legs) and the face (face shape, eyes, brows, nose, mouth, ears), and a **Parts** list to show or hide each piece (hair, top, bottoms, shoes, ...). Double-click a slider to reset it. The card keeps the values and the mod applies them when it loads the model, so every card made this way works the same.
+6. **Colours** tab: a tint per material (the mod applies the same tints) and an expression preview.
+7. **Export card**. Re-open a card later with *Open card* to change it.
 
 **Export model** saves the model as GLB, glTF, OBJ, STL or PLY (OBJ/STL/PLY in the pose on screen), or the original file.
 
 **ILLGAMES cards** (Koikatsu, Koikatsu Sunshine, AI Shoujo / Honey Select 2, Honey Come, Summer Vacation Scramble, ...) are recognised and read, but they hold settings for the game's character maker, not a 3D model. Until the studio has its base model back, export the character to PMX (for Koikatsu: the KKBP exporter) and open that.
+
+## Characters from KKBP
+
+[KKBP (KK Blender Porter Pack)](https://github.com/FlailingFog/KK-Blender-Porter-Pack) brings Koikatsu and other ILLGAMES characters into Blender. To use one in the studio, export it to GLB with the script in this repository (Blender 4.x/5.x):
+
+```
+blender --background character.blend --python tools/blender/export_kkbp_glb.py -- character.glb
+```
+
+It keeps the shape bones the Character tab works with, the hair/clothing pieces as parts, the expressions and the hair/skirt/bust bones for physics, and gives the skeleton the names the mod recognises. Add `--no-outfit` to leave the outfit out. The result contains the game's assets: use it for yourself and do not share it unless the game's terms allow.
 
 ## Card format
 

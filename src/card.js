@@ -115,6 +115,7 @@ export async function writeCard(png, info, files) {
   // Optional sections (docs/CARD_FORMAT.md): physics groups and the character maker's sliders.
   if (info.physics) manifest.physics = info.physics;
   if (info.template) manifest.template = info.template;
+  if (info.shape) manifest.shape = info.shape;
   const manifestBytes = new TextEncoder().encode(JSON.stringify(manifest));
 
   const header = new Uint8Array(16);
